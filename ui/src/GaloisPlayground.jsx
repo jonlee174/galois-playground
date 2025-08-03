@@ -1,8 +1,79 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import galoisImage from "./assets/galois.jpg";
 import sageMathImage from "./assets/sage-math.jpg";
 
-// Enhanced UI components with purple theming
+// LaTeX Math component for rendering mathematical expressions
+const MathDisplay = ({ children, inline = false }) => {
+  const [content, setContent] = useState('');
+  
+  useEffect(() => {
+    if (typeof children === 'string') {
+      setContent(children);
+    } else {
+      setContent(String(children));
+    }
+  }, [children]);
+
+  useEffect(() => {
+    if (window.MathJax && window.MathJax.typesetPromise) {
+      window.MathJax.typesetPromise();
+    }
+  }, [content]);
+
+  if (inline) {
+    return <span dangerouslySetInnerHTML={{ __html: `$${content}$` }} />;
+  }
+  
+  return <div dangerouslySetInnerHTML={{ __html: `$$${content}$$` }} />;
+};
+
+// Enhanced Input component with LaTeX preview
+const MathInput = ({ placeholder, value, onChange, className = "" }) => {
+  const [showPreview, setShowPreview] = useState(false);
+  
+  // Convert common input patterns to LaTeX
+  const convertToLatex = (input) => {
+    let latex = input
+      .replace(/\^(\d+)/g, '^{$1}')  // x^2 -> x^{2}
+      .replace(/\^([a-zA-Z]+)/g, '^{$1}')  // x^n -> x^{n}
+      .replace(/sqrt\(([^)]+)\)/g, '\\sqrt{$1}')  // sqrt(2) -> \sqrt{2}
+      .replace(/\bpi\b/g, '\\pi')  // pi -> \pi
+      .replace(/\balpha\b/g, '\\alpha')  // alpha -> \alpha
+      .replace(/\bbeta\b/g, '\\beta')  // beta -> \beta
+      .replace(/\btheta\b/g, '\\theta')  // theta -> \theta
+      .replace(/\bomega\b/g, '\\omega')  // omega -> \omega
+      .replace(/\*/g, ' \\cdot ')  // * -> \cdot
+      .replace(/\+-/g, '\\pm')  // +- -> \pm
+      .replace(/-\+/g, '\\mp');  // -+ -> \mp
+    
+    return latex;
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="relative">
+        <input
+          type="text"
+          placeholder={placeholder}
+          value={value}
+          onChange={onChange}
+          onFocus={() => setShowPreview(true)}
+          onBlur={() => setTimeout(() => setShowPreview(false), 200)}
+          className={`w-full px-4 py-3 border-2 border-purple-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white shadow-sm ${className}`}
+        />
+        {showPreview && value && (
+          <div className="absolute top-full left-0 right-0 mt-1 p-3 bg-purple-50 border border-purple-200 rounded-lg shadow-lg z-10">
+            <div className="text-sm text-purple-700 mb-1">Preview:</div>
+            <div className="text-center bg-white p-2 rounded border">
+              <MathDisplay>{convertToLatex(value)}</MathDisplay>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const Input = ({ placeholder, value, onChange, className = "" }) => (
   <input
     type="text"
@@ -149,9 +220,9 @@ export default function GaloisPlayground() {
           <CardContent className="space-y-6 pt-8">
             <div className="space-y-4">
               <label className="block text-lg font-semibold text-purple-800 mb-2">
-                Enter a Polynomial over ℚ
+                Enter a Polynomial over <MathDisplay inline>{"\\mathbb{Q}"}</MathDisplay>
               </label>
-              <Input
+              <MathInput
                 placeholder="e.g., x^2-2, x^3-8, x^4-16, x^2+1"
                 value={polynomial}
                 onChange={(e) => setPolynomial(e.target.value)}
@@ -159,9 +230,9 @@ export default function GaloisPlayground() {
               />
               <div className="bg-purple-50 rounded-lg p-4 border-l-4 border-purple-400">
                 <div className="text-sm text-purple-700 space-y-1">
-                  <p><strong>Examples:</strong> x^2-2, x^3-2, x^4-2, x^2+1, X^2-1, x^2-5, x^3-8, x^4-16</p>
+                  <p><strong>Examples:</strong> <MathDisplay inline>{"x^2-2"}</MathDisplay>, <MathDisplay inline>{"x^3-2"}</MathDisplay>, <MathDisplay inline>{"x^4-2"}</MathDisplay>, <MathDisplay inline>{"x^2+1"}</MathDisplay></p>
                   <p><strong>Note:</strong> Spaces are optional - both "x^2-2" and "x^2 - 2" work perfectly!</p>
-                  <p><strong>Supported:</strong> Any polynomial of the form x^n ± constant</p>
+                  <p><strong>Supported:</strong> Any polynomial of the form <MathDisplay inline>{"x^n \\pm c"}</MathDisplay> where <MathDisplay inline>{"c"}</MathDisplay> is a constant</p>
                 </div>
               </div>
             </div>
@@ -177,7 +248,7 @@ export default function GaloisPlayground() {
                   <span>Computing Galois Group...</span>
                 </div>
               ) : (
-                "🔬 Compute Galois Group"
+                "Compute Galois Group"
               )}
             </Button>
           </CardContent>
@@ -189,7 +260,7 @@ export default function GaloisPlayground() {
             <Card className="shadow-2xl border-2 border-purple-200">
               <CardContent className="pt-8">
                 <h2 className="text-2xl font-bold text-purple-800 mb-6 text-center">
-                  🎯 Mathematical Results
+                  Results
                 </h2>
                 
                 <div className="grid md:grid-cols-2 gap-6">
@@ -197,12 +268,16 @@ export default function GaloisPlayground() {
                   <div className="space-y-4">
                     <div className="bg-gradient-to-r from-purple-100 to-indigo-100 rounded-lg p-4">
                       <h3 className="font-semibold text-purple-800 mb-2">📐 Polynomial</h3>
-                      <p className="text-lg font-mono text-purple-900">{result.polynomial}</p>
+                      <div className="text-lg text-purple-900 text-center p-2 bg-white rounded border">
+                        <MathDisplay>{result.polynomial.replace(/\^(\d+)/g, '^{$1}')}</MathDisplay>
+                      </div>
                     </div>
                     
                     <div className="bg-gradient-to-r from-indigo-100 to-purple-100 rounded-lg p-4">
                       <h3 className="font-semibold text-purple-800 mb-2">🔗 Galois Group</h3>
-                      <p className="text-xl font-bold text-purple-900">{result.galoisGroup}</p>
+                      <div className="text-xl font-bold text-purple-900 text-center p-2 bg-white rounded border">
+                        <MathDisplay>{result.galoisGroup}</MathDisplay>
+                      </div>
                     </div>
                   </div>
                   
@@ -210,27 +285,31 @@ export default function GaloisPlayground() {
                   <div className="space-y-4">
                     <div className="bg-gradient-to-r from-purple-100 to-indigo-100 rounded-lg p-4">
                       <h3 className="font-semibold text-purple-800 mb-2">🏗️ Group Structure</h3>
-                      <p className="text-purple-900">{result.structure}</p>
+                      <div className="text-purple-900 text-center p-2 bg-white rounded border">
+                        <MathDisplay>{result.structure}</MathDisplay>
+                      </div>
                     </div>
                     
                     <div className="bg-gradient-to-r from-indigo-100 to-purple-100 rounded-lg p-4">
                       <h3 className="font-semibold text-purple-800 mb-2">📊 Field Degree</h3>
-                      <p className="text-xl font-bold text-purple-900">[ℚ(α) : ℚ] = {result.fieldDegree}</p>
+                      <div className="text-xl font-bold text-purple-900 text-center p-2 bg-white rounded border">
+                        <MathDisplay>{`[\\mathbb{Q}(\\alpha) : \\mathbb{Q}] = ${result.fieldDegree}`}</MathDisplay>
+                      </div>
                     </div>
                   </div>
                 </div>
                 
                 {/* Roots section - full width */}
                 <div className="mt-6 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg p-6 border border-purple-200">
-                  <h3 className="font-semibold text-purple-800 mb-3 text-center">🌱 Roots in ℂ</h3>
+                  <h3 className="font-semibold text-purple-800 mb-3 text-center">🌱 Roots in <MathDisplay inline>{"\\mathbb{C}"}</MathDisplay></h3>
                   <div className="flex flex-wrap justify-center gap-3">
                     {result.roots.map((root, index) => (
-                      <span 
+                      <div 
                         key={index}
-                        className="bg-white px-4 py-2 rounded-full border-2 border-purple-300 text-purple-800 font-mono text-lg shadow-sm"
+                        className="bg-white px-4 py-2 rounded-full border-2 border-purple-300 shadow-sm"
                       >
-                        {root}
-                      </span>
+                        <MathDisplay inline>{root.replace(/√/g, '\\sqrt{').replace(/∛/g, '\\sqrt[3]{').replace(/⁴√/g, '\\sqrt[4]{').replace(/ω/g, '\\omega').replace(/²/g, '^2').replace(/α/g, '\\alpha').replace(/i/g, '\\mathrm{i}')}</MathDisplay>
+                      </div>
                     ))}
                   </div>
                 </div>
