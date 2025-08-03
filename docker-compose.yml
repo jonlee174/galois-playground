@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    ports:
+      - "5000:5000"
+    container_name: galois-backend
+
+  frontend:
+    build:
+      context: ./ui
+    ports:
+      - "3000:3000"
+    container_name: galois-frontend
+    depends_on:
+      - backend
