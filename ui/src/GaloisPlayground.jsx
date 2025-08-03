@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import galoisImage from "./assets/galois.jpg";
+import sageMathImage from "./assets/sage-math.jpg";
 
 // Enhanced UI components with purple theming
 const Input = ({ placeholder, value, onChange, className = "" }) => (
@@ -91,22 +93,23 @@ export default function GaloisPlayground() {
             {/* Évariste Galois portrait */}
             <div className="text-center">
               <div className="w-24 h-24 rounded-full bg-gradient-to-r from-purple-400 to-indigo-400 p-1 shadow-xl">
-                <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
+                <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
                   <img 
-                    src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Evariste_galois.jpg/256px-Evariste_galois.jpg" 
+                    src={galoisImage} 
                     alt="Évariste Galois"
                     className="w-20 h-20 rounded-full object-cover"
                     onError={(e) => {
+                      // If local image fails, show fallback
                       e.target.style.display = 'none';
                       e.target.nextSibling.style.display = 'flex';
                     }}
                   />
-                  <div className="w-20 h-20 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-bold text-lg hidden">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-100 to-indigo-100 flex items-center justify-center text-purple-700 font-bold text-xl hidden border-2 border-purple-300">
                     ÉG
                   </div>
                 </div>
               </div>
-              <p className="text-purple-200 text-sm mt-2 font-medium">Évariste Galois</p>
+              <p className="text-purple-200 text-sm mt-2 font-medium text-center">Évariste Galois</p>
             </div>
             
             {/* Title */}
@@ -120,22 +123,23 @@ export default function GaloisPlayground() {
             {/* SageMath logo */}
             <div className="text-center">
               <div className="w-24 h-24 rounded-full bg-gradient-to-r from-indigo-400 to-purple-400 p-1 shadow-xl">
-                <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
+                <div className="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
                   <img 
-                    src="https://www.sagemath.org/pix/sage_logo_new.png" 
+                    src={sageMathImage} 
                     alt="SageMath"
-                    className="w-18 h-18 object-contain"
+                    className="w-20 h-20 rounded-full object-cover"
                     onError={(e) => {
+                      // If local image fails, show fallback
                       e.target.style.display = 'none';
                       e.target.nextSibling.style.display = 'flex';
                     }}
                   />
-                  <div className="w-18 h-18 bg-purple-100 flex items-center justify-center text-purple-600 font-bold text-lg rounded hidden">
+                  <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white font-bold text-lg rounded-full shadow-inner hidden">
                     SAGE
                   </div>
                 </div>
               </div>
-              <p className="text-purple-200 text-sm mt-2 font-medium">Powered by SageMath</p>
+              <p className="text-purple-200 text-sm mt-2 font-medium text-center">Powered by SageMath</p>
             </div>
           </div>
         </div>
