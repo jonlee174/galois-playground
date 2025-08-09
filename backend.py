@@ -2,13 +2,42 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from sage.all import *
 from sage.rings.number_field.galois_group import GaloisGroup_v2
-import signal
-import time
-import threading
-from queue import Queue, Empty
 
 app = Flask(__name__)
 CORS(app)  # Allow cross-origin requests from frontend
+
+def build_sage_polynomial(poly_str: str):
+    """
+    Convert a polynomial string that uses '^' for power into a SageMath
+    polynomial object over QQ in variable x.
+    
+    Example:
+        poly = build_sage_polynomial("x^2 - 2")
+    """
+    # Replace caret with Python exponent operator '**'
+    poly_str = poly_str.replace('^', '**')
+
+    # Also accept capital letters, e.g., replace 'X' with 'x'
+    poly_str = poly_str.replace('X', 'x')
+    
+    # Clean up extra spaces
+    import re
+    poly_str = re.sub(r'\s+', ' ', poly_str).strip()
+    
+    # Create a polynomial ring over QQ with variable x
+    R = PolynomialRing(QQ, 'x')
+    x = R.gen()
+    
+    try:
+        # Try parsing the polynomial directly
+        poly = R(poly_str)
+    except Exception:
+        # Fallback: use sage_eval if direct parsing fails
+        from sage.all import sage_eval
+        poly = sage_eval(poly_str, locals={'x': x})
+        poly = R(poly)
+        
+    return poly
 
 @app.route("/api/test", methods=["GET"])
 def test():
@@ -69,10 +98,21 @@ def compute_galois():
 
 if __name__ == "__main__":
     print("Starting Galois Playground backend...")
-    R = ZZ['x']; (x,) = R._first_ngens(1)
-    x = polygen(ZZ, 'x')
-    K = NumberField(x**Integer(3) - Integer(2), names=('a',)); (a,) = K._first_ngens(1)
-    G = K.galois_group(type='pari')
+    polynomial_str = input("Enter a polynomial: ")
+    poly = build_sage_polynomial(polynomial_str)
+    if poly.is_irreducible():
+        K = NumberField(poly, names=('a',)); (a,) = K._first_ngens(1)
+        G = K.galois_group(type='pari')
 
-    print(f"Is Galois: {G.is_galois()}\nGroup order: {G.order()}\nGroup structure: {G}\nRoots: {x.roots()}\nField degree: {K.degree()}")
+        print(f"Is Galois: {G.is_galois()}\nGroup order: {G.order()}\nGroup structure: {G}\nRoots: {poly.roots()}\nField degree: {K.degree()}\nField Structure: {K.structure()}")
+        print("Fixed fields: ")
+        if (G.is_galois() and G.order() <= 120):
+            for f in G:
+                try:
+                    print(f" - {G.subgroup(f).fixed_field()}")
+                except ValueError as ve:
+                    continue
+
+    else:
+        print(f"The polynomial {poly} is not irreducible, so Galois group computation may not be meaningful.")
     #app.run(host='0.0.0.0', port=5000, debug=True)
