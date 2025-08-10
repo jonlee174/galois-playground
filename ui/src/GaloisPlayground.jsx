@@ -121,7 +121,7 @@ export default function GaloisPlayground() {
     setResult(null);
 
     try {
-      const response = await fetch("http://localhost:5000/api/galois", {
+      const response = await fetch("/api/galois", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -134,9 +134,10 @@ export default function GaloisPlayground() {
       }
 
       const data = await response.json();
+      console.log("Backend response:", data);
       
-      if (data.error) {
-        throw new Error(data.error);
+      if (!data.computation_successful) {
+        throw new Error(data.error || "Computation failed");
       }
 
       setResult(data);
@@ -275,8 +276,11 @@ export default function GaloisPlayground() {
                     
                     <div className="bg-gradient-to-r from-indigo-100 to-purple-100 rounded-lg p-4">
                       <h3 className="font-semibold text-purple-800 mb-2">🔗 Galois Group</h3>
-                      <div className="text-xl font-bold text-purple-900 text-center p-2 bg-white rounded border">
-                        <MathDisplay>{result.galoisGroup}</MathDisplay>
+                      <div className="text-4xl font-bold text-purple-900 text-center p-4 bg-white rounded border shadow-inner">
+                        <MathDisplay>{result.galois_group?.explicit || 'N/A'}</MathDisplay>
+                      </div>
+                      <div className="text-sm text-purple-700 text-center mt-2 font-medium">
+                        Order: {result.galois_group?.order}
                       </div>
                     </div>
                   </div>
@@ -284,16 +288,16 @@ export default function GaloisPlayground() {
                   {/* Right column */}
                   <div className="space-y-4">
                     <div className="bg-gradient-to-r from-purple-100 to-indigo-100 rounded-lg p-4">
-                      <h3 className="font-semibold text-purple-800 mb-2">🏗️ Group Structure</h3>
-                      <div className="text-purple-900 text-center p-2 bg-white rounded border">
-                        <MathDisplay>{result.structure}</MathDisplay>
+                      <h3 className="font-semibold text-purple-800 mb-2">🏗️ Group Details</h3>
+                      <div className="text-sm text-purple-900 text-center p-2 bg-white rounded border break-words">
+                        {result.galois_group?.description || 'N/A'}
                       </div>
                     </div>
                     
                     <div className="bg-gradient-to-r from-indigo-100 to-purple-100 rounded-lg p-4">
                       <h3 className="font-semibold text-purple-800 mb-2">📊 Field Degree</h3>
                       <div className="text-xl font-bold text-purple-900 text-center p-2 bg-white rounded border">
-                        <MathDisplay>{`[\\mathbb{Q}(\\alpha) : \\mathbb{Q}] = ${result.fieldDegree}`}</MathDisplay>
+                        <MathDisplay>{`[\\mathbb{Q}(\\alpha) : \\mathbb{Q}] = ${result.degree || 'N/A'}`}</MathDisplay>
                       </div>
                     </div>
                   </div>
@@ -303,7 +307,7 @@ export default function GaloisPlayground() {
                 <div className="mt-6 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg p-6 border border-purple-200">
                   <h3 className="font-semibold text-purple-800 mb-3 text-center">🌱 Roots in <MathDisplay inline>{"\\mathbb{C}"}</MathDisplay></h3>
                   <div className="flex flex-wrap justify-center gap-3">
-                    {result.roots.map((root, index) => (
+                    {result.roots && result.roots.map((root, index) => (
                       <div 
                         key={index}
                         className="bg-white px-4 py-2 rounded-full border-2 border-purple-300 shadow-sm"

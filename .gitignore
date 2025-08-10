@@ -1,3 +1,4 @@
 ssh-key
 ssh-key.pub
 node_modules
+*.log
