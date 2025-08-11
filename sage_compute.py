@@ -43,7 +43,20 @@ def compute_galois_info(polynomial_str):
         # Parse the polynomial
         poly = sage_eval(polynomial_str, locals={'x': x})
         
-        # Create number field
+        # Check if polynomial is irreducible first
+        if not poly.is_irreducible():
+            # For reducible polynomials, we can't create a simple number field
+            # Instead, we'll return a specific error message
+            return {
+                "polynomial": polynomial_str,
+                "degree": int(poly.degree()),
+                "is_irreducible": False,
+                "error": "This polynomial is reducible over Q and does not have a single Galois group. Consider its irreducible factors instead.",
+                "error_type": "reducible_polynomial",
+                "computation_successful": False
+            }
+        
+        # Create number field (only for irreducible polynomials)
         K = NumberField(poly, names=('a',))
         
         # Get Galois group
@@ -57,61 +70,111 @@ def compute_galois_info(polynomial_str):
         def extract_group_notation(group_str, order):
             """Extract concise group notation from SageMath group description"""
             # Common patterns in SageMath Galois group descriptions
-            if "S2" in group_str or (order == 2 and "2T1" in group_str):
-                return "S₂"
-            elif "S3" in group_str or (order == 6 and "3T2" in group_str):
-                return "S₃"
-            elif "S4" in group_str or (order == 24 and "4T5" in group_str):
-                return "S₄"
-            elif "S5" in group_str or (order == 120 and "5T5" in group_str):
-                return "S₅"
-            elif "C3" in group_str or (order == 3 and "3T1" in group_str):
-                return "C₃"
-            elif "C4" in group_str or (order == 4 and "4T1" in group_str):
-                return "C₄"
-            elif "C5" in group_str or (order == 5 and "5T1" in group_str):
-                return "C₅"
-            elif "D4" in group_str or (order == 8 and "4T3" in group_str):
-                return "D₄"
-            elif "D3" in group_str or (order == 6 and "3T2" in group_str):
-                return "D₃"
-            elif "A4" in group_str or (order == 12 and "4T4" in group_str):
-                return "A₄"
-            elif "A5" in group_str or (order == 60 and "5T4" in group_str):
-                return "A₅"
-            elif order == 1:
-                return "C₁"
+            if order == 1:
+                return "C_1\\cong\\mathbb{Z}/1\\mathbb{Z}"
             elif order == 2:
-                return "C₂"
-            elif order == 4 and "V4" in group_str:
-                return "V₄"  # Klein four-group
+                return "C_2\\cong\\mathbb{Z}/2\\mathbb{Z}"
+            elif "(S" in group_str:
+                group_num = group_str.split("(S")[1].split(")")[0]
+                return f"S_{group_num}"
+            elif "(C" in group_str or (order == 3 and "3T1" in group_str):
+                group_num = group_str.split("(C")[1].split(")")[0]
+                return "C_" + group_num +"\\cong\\mathbb{Z}/" + group_num +"\\mathbb{Z}"
+            elif "D4" in group_str or (order == 8 and "4T3" in group_str):
+                return "D_4"
+            elif "D3" in group_str or (order == 6 and "3T2" in group_str):
+                return "D_3"
+            elif "A4" in group_str or (order == 12 and "4T4" in group_str):
+                return "A_4"
+            elif "A5" in group_str or (order == 60 and "5T4" in group_str):
+                return "A_5"
+            elif order == 4 and "4T2" in group_str:
+                return "V_4\\cong\\mathbb{Z}/2\\times\\mathbb{Z}/2"
             elif order == 8 and "Q8" in group_str:
-                return "Q₈"  # Quaternion group
+                return "Q_8"
+            # Check for semidirect product pattern ({number}:{number})
+            elif "(" in group_str and ":" in group_str and ")" in group_str:
+                import re
+                semidirect_pattern = r'\((\d+):(\d+)\)'
+                match = re.search(semidirect_pattern, group_str)
+                if match:
+                    n1, n2 = match.groups()
+                    return f"C_{{{n1}}}\\rtimes C_{{{n2}}}"
             else:
-                # Fall back to generic notation
-                if order <= 12:
-                    return f"G_{order}"
-                else:
-                    return f"G_{order}"
-        
+                return "G_{" + str(order) + "}"
+
         explicit_group = extract_group_notation(group_name, order)
         
         # Get roots
         complex_roots = poly.complex_roots()
         
-        # Format roots as strings for JSON serialization
+        # Format roots as strings for JSON serialization with +- notation
         roots = []
-        for root in complex_roots:
+        processed_indices = set()
+        
+        for i, root in enumerate(complex_roots):
+            if i in processed_indices:
+                continue
+                
             try:
                 # Convert to complex number for better representation
                 complex_val = complex(root)
+                
                 if abs(complex_val.imag) < 1e-10:
-                    # Essentially real
-                    roots.append(f"{complex_val.real:.6f}")
+                    # Real root
+                    real_val = complex_val.real
+                    
+                    # Look for the negative counterpart
+                    negative_index = None
+                    for j, other_root in enumerate(complex_roots):
+                        if j != i and j not in processed_indices:
+                            other_complex = complex(other_root)
+                            if (abs(other_complex.imag) < 1e-10 and 
+                                abs(other_complex.real + real_val) < 1e-6):
+                                negative_index = j
+                                break
+                    
+                    if negative_index is not None:
+                        # Found a ± pair
+                        abs_val = abs(real_val)
+                        roots.append(f"\\pm {abs_val:.6f}")
+                        processed_indices.add(negative_index)
+                    else:
+                        # Single root
+                        roots.append(f"{real_val:.6f}")
+                        
                 else:
-                    roots.append(f"{complex_val.real:.6f} + {complex_val.imag:.6f}i")
-            except:
+                    # Complex root - look for conjugate
+                    conjugate_index = None
+                    for j, other_root in enumerate(complex_roots):
+                        if j != i and j not in processed_indices:
+                            other_complex = complex(other_root)
+                            if (abs(other_complex.real - complex_val.real) < 1e-6 and 
+                                abs(other_complex.imag + complex_val.imag) < 1e-6):
+                                conjugate_index = j
+                                break
+                    
+                    if conjugate_index is not None:
+                        # Found a conjugate pair
+                        real_part = complex_val.real
+                        imag_part = abs(complex_val.imag)
+                        
+                        if abs(real_part) < 1e-10:
+                            roots.append(f"\\pm {imag_part:.6f}i")
+                        else:
+                            roots.append(f"{real_part:.6f} \\pm {imag_part:.6f}i")
+                        processed_indices.add(conjugate_index)
+                    else:
+                        # Single complex root
+                        if abs(complex_val.real) < 1e-10:
+                            roots.append(f"{complex_val.imag:.6f}i")
+                        else:
+                            roots.append(f"{complex_val.real:.6f} + {complex_val.imag:.6f}i")
+                        
+            except Exception as e:
                 roots.append(str(root))
+            
+            processed_indices.add(i)
         
         # Get polynomial degree and other info
         degree = int(poly.degree())

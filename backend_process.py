@@ -7,9 +7,6 @@ This version runs SageMath computations in separate processes to avoid PARI thre
 
 import asyncio
 import json
-import subprocess
-import os
-import sys
 from pathlib import Path
 from typing import Dict, Any, Optional
 

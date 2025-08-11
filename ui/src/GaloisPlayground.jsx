@@ -110,15 +110,17 @@ export default function GaloisPlayground() {
   const [polynomial, setPolynomial] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
 
   const handleSubmit = async () => {
     if (!polynomial.trim()) {
-      alert("Please enter a polynomial");
+      setError("Please enter a polynomial");
       return;
     }
 
     setLoading(true);
     setResult(null);
+    setError(null);
 
     try {
       const response = await fetch("/api/galois", {
@@ -130,20 +132,38 @@ export default function GaloisPlayground() {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
       console.log("Backend response:", data);
       
       if (!data.computation_successful) {
-        throw new Error(data.error || "Computation failed");
+        // Check for specific error types
+        if (data.error_type === "reducible_polynomial") {
+          setError({
+            type: "reducible",
+            message: data.error,
+            polynomial: data.polynomial,
+            degree: data.degree
+          });
+        } else {
+          setError({
+            type: "computation",
+            message: data.error || "Computation failed for unknown reason"
+          });
+        }
+        return;
       }
 
       setResult(data);
     } catch (error) {
       console.error("Error calling backend:", error);
-      alert(`Error: ${error.message}`);
+      setError({
+        type: "network",
+        message: `Network error: ${error.message}`
+      });
     } finally {
       setLoading(false);
     }
@@ -231,9 +251,15 @@ export default function GaloisPlayground() {
               />
               <div className="bg-purple-50 rounded-lg p-4 border-l-4 border-purple-400">
                 <div className="text-sm text-purple-700 space-y-1">
-                  <p><strong>Examples:</strong> <MathDisplay inline>{"x^2-2"}</MathDisplay>, <MathDisplay inline>{"x^3-2"}</MathDisplay>, <MathDisplay inline>{"x^4-2"}</MathDisplay>, <MathDisplay inline>{"x^2+1"}</MathDisplay></p>
+                  <p><strong>Examples:</strong> <MathDisplay inline>{"x^2-2"}</MathDisplay>, <MathDisplay inline>{"x^3-2"}</MathDisplay>, <MathDisplay inline>{"x^4-10x^2+1"}</MathDisplay>, <MathDisplay inline>{"x^5-2"}</MathDisplay></p>
                   <p><strong>Note:</strong> Spaces are optional - both "x^2-2" and "x^2 - 2" work perfectly!</p>
-                  <p><strong>Supported:</strong> Any polynomial of the form <MathDisplay inline>{"x^n \\pm c"}</MathDisplay> where <MathDisplay inline>{"c"}</MathDisplay> is a constant</p>
+                  <p><strong>Supported:</strong> Any polynomial with rational coefficients, including:</p>
+                  <div className="ml-4 space-y-1">
+                    <p>• Simple forms: <MathDisplay inline>{"x^n \\pm c"}</MathDisplay> (e.g., <MathDisplay inline>{"x^3-2, x^4+5"}</MathDisplay>)</p>
+                    <p>• Quadratic-like: <MathDisplay inline>{"x^4 + ax^2 + b"}</MathDisplay> (e.g., <MathDisplay inline>{"x^4-10x^2+1"}</MathDisplay>)</p>
+                    <p>• General polynomials: <MathDisplay inline>{"a_nx^n + \\ldots + a_1x + a_0"}</MathDisplay> with rational coefficients</p>
+                    <p className="text-purple-600 font-medium">⚠️ Polynomial must be irreducible over ℚ for Galois group computation</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -255,6 +281,78 @@ export default function GaloisPlayground() {
           </CardContent>
         </Card>
 
+        {/* Error display card */}
+        {error && (
+          <Card className="shadow-2xl border-2 border-red-200 animate-fadeIn">
+            <CardContent className="pt-8">
+              <div className="text-center space-y-4">
+                {error.type === "reducible" ? (
+                  <>
+                    <div className="text-4xl mb-2">⚠️</div>
+                    <h2 className="text-2xl font-bold text-orange-800 mb-4">
+                      Reducible Polynomial Detected
+                    </h2>
+                    <div className="bg-orange-50 border-l-4 border-orange-400 p-6 rounded-lg text-left">
+                      <div className="space-y-3">
+                        <div className="text-orange-800">
+                          <strong>Input polynomial:</strong> 
+                          <div className="text-center p-2 bg-white rounded border mt-2">
+                            <MathDisplay>{error.polynomial.replace(/\^(\d+)/g, '^{$1}')}</MathDisplay>
+                          </div>
+                        </div>
+                        <div className="text-orange-800">
+                          <strong>Degree:</strong> {error.degree}
+                        </div>
+                        <div className="text-orange-700 bg-orange-100 p-4 rounded border">
+                          <p className="font-medium mb-2"> Why this matters:</p>
+                          <p>{error.message}</p>
+                          <p className="mt-2">
+                            A reducible polynomial factors into smaller polynomials over ℚ. 
+                            The concept of "the" Galois group applies to irreducible polynomials. 
+                            Try an irreducible polynomial like <MathDisplay inline>{"x^2-2"}</MathDisplay>, <MathDisplay inline>{"x^3-2"}</MathDisplay>, or <MathDisplay inline>{"x^4-10x^2+1"}</MathDisplay>.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : error.type === "computation" ? (
+                  <>
+                    <div className="text-4xl mb-2">❌</div>
+                    <h2 className="text-2xl font-bold text-red-800 mb-4">
+                      Computation Error
+                    </h2>
+                    <div className="bg-red-50 border-l-4 border-red-400 p-6 rounded-lg text-left">
+                      <p className="text-red-700">{error.message}</p>
+                      <p className="text-red-600 mt-2 text-sm">
+                        Please check your polynomial syntax and try again.
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-4xl mb-2">🔌</div>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-4">
+                      Network Error
+                    </h2>
+                    <div className="bg-gray-50 border-l-4 border-gray-400 p-6 rounded-lg text-left">
+                      <p className="text-gray-700">{error.message}</p>
+                      <p className="text-gray-600 mt-2 text-sm">
+                        Please check your connection and try again.
+                      </p>
+                    </div>
+                  </>
+                )}
+                <Button 
+                  onClick={() => setError(null)}
+                  className="mt-4 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700"
+                >
+                  Dismiss
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Results card */}
         {result && (
           <div className="space-y-6 animate-fadeIn">
@@ -268,14 +366,14 @@ export default function GaloisPlayground() {
                   {/* Left column */}
                   <div className="space-y-4">
                     <div className="bg-gradient-to-r from-purple-100 to-indigo-100 rounded-lg p-4">
-                      <h3 className="font-semibold text-purple-800 mb-2">📐 Polynomial</h3>
+                      <h3 className="font-semibold text-purple-800 mb-2">Polynomial</h3>
                       <div className="text-lg text-purple-900 text-center p-2 bg-white rounded border">
                         <MathDisplay>{result.polynomial.replace(/\^(\d+)/g, '^{$1}')}</MathDisplay>
                       </div>
                     </div>
                     
                     <div className="bg-gradient-to-r from-indigo-100 to-purple-100 rounded-lg p-4">
-                      <h3 className="font-semibold text-purple-800 mb-2">🔗 Galois Group</h3>
+                      <h3 className="font-semibold text-purple-800 mb-2">Galois Group</h3>
                       <div className="text-4xl font-bold text-purple-900 text-center p-4 bg-white rounded border shadow-inner">
                         <MathDisplay>{result.galois_group?.explicit || 'N/A'}</MathDisplay>
                       </div>
@@ -288,14 +386,14 @@ export default function GaloisPlayground() {
                   {/* Right column */}
                   <div className="space-y-4">
                     <div className="bg-gradient-to-r from-purple-100 to-indigo-100 rounded-lg p-4">
-                      <h3 className="font-semibold text-purple-800 mb-2">🏗️ Group Details</h3>
+                      <h3 className="font-semibold text-purple-800 mb-2">Group Details</h3>
                       <div className="text-sm text-purple-900 text-center p-2 bg-white rounded border break-words">
                         {result.galois_group?.description || 'N/A'}
                       </div>
                     </div>
                     
                     <div className="bg-gradient-to-r from-indigo-100 to-purple-100 rounded-lg p-4">
-                      <h3 className="font-semibold text-purple-800 mb-2">📊 Field Degree</h3>
+                      <h3 className="font-semibold text-purple-800 mb-2">Field Degree</h3>
                       <div className="text-xl font-bold text-purple-900 text-center p-2 bg-white rounded border">
                         <MathDisplay>{`[\\mathbb{Q}(\\alpha) : \\mathbb{Q}] = ${result.degree || 'N/A'}`}</MathDisplay>
                       </div>
@@ -305,7 +403,7 @@ export default function GaloisPlayground() {
                 
                 {/* Roots section - full width */}
                 <div className="mt-6 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg p-6 border border-purple-200">
-                  <h3 className="font-semibold text-purple-800 mb-3 text-center">🌱 Roots in <MathDisplay inline>{"\\mathbb{C}"}</MathDisplay></h3>
+                  <h3 className="font-semibold text-purple-800 mb-3 text-center">Roots in <MathDisplay inline>{"\\mathbb{C}"}</MathDisplay></h3>
                   <div className="flex flex-wrap justify-center gap-3">
                     {result.roots && result.roots.map((root, index) => (
                       <div 
