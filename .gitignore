@@ -1,2 +1,9 @@
 ssh-key
 ssh-key.pub
+
+node_modules
+__pycache__
+
+*.pyc
+*.log
+*.cpython-312.pyc
