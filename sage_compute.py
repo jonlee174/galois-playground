@@ -2,7 +2,8 @@
 
 """
 Isolated SageMath computation script
-This runs in a separate process to avoid PARI         result = {
+This runs in a separate process to avoid PARI conflicts
+        result = {
             "polynomial": polynomial_str,
             "degree": degree,
             "galois_group": {
@@ -15,7 +16,7 @@ This runs in a separate process to avoid PARI         result = {
             "number_field": str(K),
             "is_irreducible": is_irreducible,
             "computation_successful": True
-        }flicts
+        }
 """
 
 import sys
@@ -25,28 +26,87 @@ import os
 # Set single-threaded PARI before importing SageMath
 os.environ['SAGE_NUM_THREADS'] = '1'
 os.environ['OMP_NUM_THREADS'] = '1'
-os.environ['PARI_SIZE'] = '50000000'
+os.environ['PARI_SIZE'] = '2000000000'
 
-# Import SageMath at module level
 from sage.all import * # type: ignore
+
+def extract_group_notation(group_str, order):
+    """
+    Convert group structure description to proper LaTeX notation.
+    Handles output from GAP's structure_description() which gives strings like:
+    - "C2 x C2", "C3", "D8", "S4", "A5"
+    - "C7 : C3" (semidirect products)
+    - "Q8" (quaternion group)
+    - "1" (trivial group)
+    """
+    import re
+
+    group_str = str(group_str).strip()
+    
+    # Handle trivial group
+    if group_str == "1" or order == 1:
+        return "C_1 \\cong \\{1\\}"
+    
+    # Replace common group notation patterns with LaTeX
+    latex_str = group_str
+    
+    # Cyclic groups: C12 -> C_{12}
+    latex_str = re.sub(r'\bC(\d+)\b', r'C_{\1}', latex_str)
+    
+    # Dihedral groups: D8 -> D_{8}
+    latex_str = re.sub(r'\bD(\d+)\b', r'D_{\1}', latex_str)
+    
+    # Symmetric groups: S4 -> S_{4}
+    latex_str = re.sub(r'\bS(\d+)\b', r'S_{\1}', latex_str)
+    
+    # Alternating groups: A5 -> A_{5}
+    latex_str = re.sub(r'\bA(\d+)\b', r'A_{\1}', latex_str)
+    
+    # Quaternion groups: Q8 -> Q_{8}
+    latex_str = re.sub(r'\bQ(\d+)\b', r'Q_{\1}', latex_str)
+    
+    # Direct products: " x " -> " \\times "
+    latex_str = re.sub(r'\s+x\s+', r' \\times ', latex_str)
+    
+    # Semidirect products: " : " -> " \\rtimes "
+    latex_str = re.sub(r'\s+:\s+', r' \\rtimes ', latex_str)
+    
+    # Handle Klein four-group specifically (often appears as C2 x C2)
+    if order == 4 and ("C_2 \\times C_2" in latex_str or "C2 x C2" in group_str):
+        return "V_4 \\cong C_2 \\times C_2"
+    
+    # Add isomorphism notation for simple cyclic groups
+    cyclic_match = re.match(r'^C_\{(\d+)\}$', latex_str)
+    if cyclic_match:
+        n = cyclic_match.group(1)
+        return f"C_{{{n}}} \\cong \\mathbb{{Z}}/{n}\\mathbb{{Z}}"
+    
+    special_cases = {
+        "S_3": "S_3 \\cong D_3",
+        "S_4": "S_4",
+        "A_4": "A_4",
+        "A_5": "A_5",
+        "D_4": "D_4",
+        "D_6": "D_6 \\cong S_3",
+        "Q_8": "Q_8",
+    }
+    
+    if latex_str in special_cases:
+        return special_cases[latex_str]
+    
+    return latex_str if latex_str != group_str else f"G_{{{order}}}"
 
 def compute_galois_info(polynomial_str):
     """
     Compute Galois group information for the given polynomial.
-    This is the exact same logic as in the original backend.
     """
     try:
-        # Set up polynomial ring
         R = PolynomialRing(QQ, 'x')
         x = R.gen()
         
-        # Parse the polynomial
         poly = sage_eval(polynomial_str, locals={'x': x})
-        
-        # Check if polynomial is irreducible first
+
         if not poly.is_irreducible():
-            # For reducible polynomials, we can't create a simple number field
-            # Instead, we'll return a specific error message
             return {
                 "polynomial": polynomial_str,
                 "degree": int(poly.degree()),
@@ -56,59 +116,13 @@ def compute_galois_info(polynomial_str):
                 "computation_successful": False
             }
         
-        # Create number field (only for irreducible polynomials)
         K = NumberField(poly, names=('a',))
-        
-        # Get Galois group
         group = K.galois_group()
-        
-        # Get polynomial information
         order = int(group.order())
         group_name = str(group)
-        
-        # Extract explicit group notation (e.g., S3, C2, D4)
-        def extract_group_notation(group_str, order):
-            """Extract concise group notation from SageMath group description"""
-            # Common patterns in SageMath Galois group descriptions
-            if order == 1:
-                return "C_1\\cong\\mathbb{Z}/1\\mathbb{Z}"
-            elif order == 2:
-                return "C_2\\cong\\mathbb{Z}/2\\mathbb{Z}"
-            elif "(S" in group_str:
-                group_num = group_str.split("(S")[1].split(")")[0]
-                return f"S_{group_num}"
-            elif "(C" in group_str or (order == 3 and "3T1" in group_str):
-                group_num = group_str.split("(C")[1].split(")")[0]
-                return "C_" + group_num +"\\cong\\mathbb{Z}/" + group_num +"\\mathbb{Z}"
-            elif "D4" in group_str or (order == 8 and "4T3" in group_str):
-                return "D_4"
-            elif "D3" in group_str or (order == 6 and "3T2" in group_str):
-                return "D_3"
-            elif "A4" in group_str or (order == 12 and "4T4" in group_str):
-                return "A_4"
-            elif "A5" in group_str or (order == 60 and "5T4" in group_str):
-                return "A_5"
-            elif order == 4 and "4T2" in group_str:
-                return "V_4\\cong\\mathbb{Z}/2\\times\\mathbb{Z}/2"
-            elif order == 8 and "Q8" in group_str:
-                return "Q_8"
-            # Check for semidirect product pattern ({number}:{number})
-            elif "(" in group_str and ":" in group_str and ")" in group_str:
-                import re
-                semidirect_pattern = r'\((\d+):(\d+)\)'
-                match = re.search(semidirect_pattern, group_str)
-                if match:
-                    n1, n2 = match.groups()
-                    return f"C_{{{n1}}}\\rtimes C_{{{n2}}}"
-            else:
-                return "G_{" + str(order) + "}"
-
-        explicit_group = extract_group_notation(group_name, order)
-        
-        # Get roots
+        explicit_group = extract_group_notation(str(group.structure_description()), order)
         complex_roots = poly.complex_roots()
         
-        # Format roots as strings for JSON serialization with +- notation
         roots = []
         processed_indices = set()
         
@@ -117,14 +131,10 @@ def compute_galois_info(polynomial_str):
                 continue
                 
             try:
-                # Convert to complex number for better representation
                 complex_val = complex(root)
                 
                 if abs(complex_val.imag) < 1e-10:
-                    # Real root
                     real_val = complex_val.real
-                    
-                    # Look for the negative counterpart
                     negative_index = None
                     for j, other_root in enumerate(complex_roots):
                         if j != i and j not in processed_indices:
@@ -135,16 +145,13 @@ def compute_galois_info(polynomial_str):
                                 break
                     
                     if negative_index is not None:
-                        # Found a ± pair
                         abs_val = abs(real_val)
                         roots.append(f"\\pm {abs_val:.6f}")
                         processed_indices.add(negative_index)
                     else:
-                        # Single root
                         roots.append(f"{real_val:.6f}")
                         
                 else:
-                    # Complex root - look for conjugate
                     conjugate_index = None
                     for j, other_root in enumerate(complex_roots):
                         if j != i and j not in processed_indices:
@@ -155,7 +162,6 @@ def compute_galois_info(polynomial_str):
                                 break
                     
                     if conjugate_index is not None:
-                        # Found a conjugate pair
                         real_part = complex_val.real
                         imag_part = abs(complex_val.imag)
                         
@@ -165,7 +171,6 @@ def compute_galois_info(polynomial_str):
                             roots.append(f"{real_part:.6f} \\pm {imag_part:.6f}i")
                         processed_indices.add(conjugate_index)
                     else:
-                        # Single complex root
                         if abs(complex_val.real) < 1e-10:
                             roots.append(f"{complex_val.imag:.6f}i")
                         else:
@@ -176,10 +181,8 @@ def compute_galois_info(polynomial_str):
             
             processed_indices.add(i)
         
-        # Get polynomial degree and other info
         degree = int(poly.degree())
         
-        # Check if polynomial is irreducible
         try:
             is_irreducible = bool(poly.is_irreducible())
         except:
