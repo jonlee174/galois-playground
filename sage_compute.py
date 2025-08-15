@@ -30,7 +30,32 @@ os.environ['PARI_SIZE'] = '2000000000'
 
 from sage.all import * # type: ignore
 
-def extract_group_notation(group_str, order):
+def get_group_description_with_timeout(group, timeout=10):
+    """
+    Try to get the structure description with a timeout, falling back to pari_label
+    """
+    import signal
+    
+    def timeout_handler(signum, frame):
+        raise TimeoutError("Structure description computation timed out")
+    
+    # Set up timeout
+    signal.signal(signal.SIGALRM, timeout_handler)
+    signal.alarm(timeout)
+    
+    try:
+        # Try to get structure description first
+        desc = str(group.structure_description())
+        signal.alarm(0)  # Cancel alarm
+        return desc
+    except (TimeoutError, Exception):
+        # If timeout or any other error occurs, fall back to pari_label
+        signal.alarm(0)  # Cancel alarm
+        return str(group.pari_label())
+    finally:
+        signal.alarm(0)  # Ensure alarm is cancelled
+
+def extract_group_notation(group, order):
     """
     Convert group structure description to proper LaTeX notation.
     Handles output from GAP's structure_description() which gives strings like:
@@ -40,7 +65,9 @@ def extract_group_notation(group_str, order):
     - "1" (trivial group)
     """
     import re
-
+    
+    # Get group description with timeout
+    group_str = get_group_description_with_timeout(group)
     group_str = str(group_str).strip()
     
     # Handle trivial group
@@ -120,7 +147,7 @@ def compute_galois_info(polynomial_str):
         group = K.galois_group()
         order = int(group.order())
         group_name = str(group)
-        explicit_group = extract_group_notation(str(group.structure_description()), order)
+        explicit_group = extract_group_notation(group, order)
         complex_roots = poly.complex_roots()
         
         roots = []
