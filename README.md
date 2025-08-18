@@ -9,7 +9,7 @@ A modern web application for exploring Galois theory and field extensions. Input
 - **Root Analysis**: Display polynomial roots with elegant ± notation for conjugate pairs
 - **Mathematical Notation**: Beautiful LaTeX rendering with MathJax
 - **Error Handling**: Clear feedback for reducible polynomials and computation errors
-- **Real-time Results**: Fast computation using isolated SageMath processes
+- **Real-time Results**: Ultra-fast computation using direct SageMath import (< 1 second)
 
 ## Supported Polynomials
 
@@ -26,7 +26,7 @@ The application supports any polynomial with rational coefficients, including:
 ### Backend
 - **Python 3.12+** with SageMath
 - **FastAPI** for REST API
-- **Process isolation** to avoid PARI threading conflicts
+- **Direct SageMath import** for maximum performance (no subprocess overhead)
 - **Uvicorn** ASGI server
 
 ### Frontend
@@ -71,21 +71,31 @@ The application supports any polynomial with rational coefficients, including:
 ## Usage
 
 ### Quick Start (Recommended)
-Run both backend and frontend with a single command:
+Start the backend and frontend:
 ```bash
-./run-native.sh
+# Start backend
+./start-backend.sh
+
+# In another terminal, start frontend
+cd ui
+npm run dev
 ```
 
 This will start:
-- Backend on http://localhost:8001
+- Backend on http://localhost:8001 (optimized, < 1 second response time)
 - Frontend on http://localhost:3000
 
 ### Manual Start
 
 **Start the backend:**
 ```bash
+./start-backend.sh
+```
+
+**Or manually:**
+```bash
 conda activate sage
-python backend_process.py
+python backend.py
 ```
 
 **Start the frontend:**
@@ -141,8 +151,8 @@ curl -X POST "http://localhost:8001/api/galois" \
 
 ## Architecture
 
-### Process Isolation
-The application uses process isolation to run SageMath computations separately from the web server, preventing PARI threading conflicts and ensuring stability.
+### Direct SageMath Integration
+The application uses direct SageMath imports within the FastAPI process for maximum performance, eliminating the 5-7 second subprocess startup overhead that was present in previous versions. This results in computation times under 1 second.
 
 ### Error Handling
 - **Reducible polynomials**: Clear explanation that Galois groups apply to irreducible polynomials
@@ -160,9 +170,8 @@ Roots are displayed with mathematical elegance:
 ### Project Structure
 ```
 galois-playground/
-├── backend_process.py          # FastAPI backend server
-├── sage_compute.py            # Isolated SageMath computation script
-├── run-native.sh             # Quick start script
+├── backend.py                # FastAPI backend with direct SageMath import
+├── start-backend.sh          # Backend startup script
 ├── ui/                       # React frontend
 │   ├── src/
 │   │   ├── GaloisPlayground.jsx
