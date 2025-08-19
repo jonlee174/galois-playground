@@ -7,6 +7,7 @@ This is the main backend using direct SageMath import for maximum speed
 
 import time
 from typing import Dict, Any, Optional
+from chm_label_to_tex import CHM_LABEL_TO_TEX
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -37,7 +38,7 @@ class ComputationResponse(BaseModel):
     computation_successful: bool
     error: Optional[str] = None
 
-def extract_group_notation(group, order):
+def extract_group_notation(group, polynomial):
     """
     Convert group pari_label to proper LaTeX notation.
     Handles pari_label formats like:
@@ -51,89 +52,13 @@ def extract_group_notation(group, order):
     import re
 
     # Get the pari_label
-    group_str = re.findall(r'\(([^)]+)\)', str(group))
-    if group_str:
-        group_str = group_str[0]
-    else:
-        group_str = ""
+    # group_str = re.findall(r'(?<=\().*(?=\))', str(group))
 
-    # Clean up the pari_label string (remove any prefix like "4T2=")
-    if '=' in group_str:
-        group_str = group_str.split('=')[1].strip()
-    else:
-        group_str = group_str.strip()
-    
-    # Handle trivial group
-    if group_str == "1" or order == 1:
-        return "C_1 \\cong \\{1\\}"
-    
-    # Special case: S2 is isomorphic to C2
-    if group_str == 'S2':
-        return 'C_2 \\cong \\mathbb{Z}/2\\mathbb{Z}'
-    
-    latex_str = group_str
-    
-    latex_str = re.sub(r'D\((\d+)\)', r'D_{\1}', latex_str)
-    
-    direct_product_match = re.match(r'^(\d+)\[x\](\d+)$', latex_str)
-    if direct_product_match:
-        n, m = direct_product_match.groups()
-        if n == m == '2':
-            return "V_4 \\cong C_2 \\times C_2"  # Klein four group
-        else:
-            return f"C_{{{n}}} \\times C_{{{m}}}"
+    print(int(polynomial.degree()) - 1, int(str(group).split()[2].split('T')[1]) - 1)
+    latex_str = CHM_LABEL_TO_TEX[int(polynomial.degree()) - 1][int(str(group).split()[2].split('T')[1]) - 1]
 
-    if '[x]' in latex_str:
-        factors = re.findall(r'\d+', latex_str)
-        if len(factors) >= 2:
-            cyclic_factors = [f"C_{{{f}}}" for f in factors]
-            latex_str = " \\times ".join(cyclic_factors)
-    
-    semidirect_match = re.match(r'^(\d+):(\d+)$', latex_str)
-    if semidirect_match:
-        n, m = semidirect_match.groups()
-        return f"C_{{{n}}} \\rtimes C_{{{m}}}"
-    
-    cyclic_match = re.match(r'^C(\d+)$', latex_str)
-    if cyclic_match:
-        n = cyclic_match.group(1)
-        return f"C_{{{n}}} \\cong \\mathbb{{Z}}/{n}\\mathbb{{Z}}"
-    
-    
-    # Symmetric groups: Sn -> S_{n}
-    latex_str = re.sub(r'\bS(\d+)\b', r'S_{\1}', latex_str)
-    
-    # Alternating groups: An -> A_{n}
-    latex_str = re.sub(r'\bA(\d+)\b', r'A_{\1}', latex_str)
-    
-    # Quaternion groups: Qn -> Q_{n}
-    latex_str = re.sub(r'\bQ(\d+)\b', r'Q_{\1}', latex_str)
-    
-    # Handle remaining generic patterns:
-    
-    # Direct products with 'x': "A x B" -> "A \\times B"
-    latex_str = re.sub(r'\s+x\s+', r' \\times ', latex_str)
-    
-    # Semidirect products with ':': "A : B" -> "A \\rtimes B"
-    latex_str = re.sub(r'\s+:\s+', r' \\rtimes ', latex_str)
-    
-    # Special well-known group cases
-    special_cases = {
-        "S_3": "S_3 \\cong D_3",
-        "S_4": "S_4",
-        "A_4": "A_4",
-        "A_5": "A_5",
-        "D_4": "D_4",
-        "D_6": "D_6 \\cong S_3",
-        "Q_8": "Q_8",
-        "V_4": "V_4 \\cong C_2 \\times C_2",
-    }
-    
-    if latex_str in special_cases:
-        return special_cases[latex_str]
-    
     # If no specific pattern matched, return the processed string or fallback
-    return latex_str if latex_str != group_str else f"G_{{{order}}}"
+    return latex_str if latex_str != None else f"G_{{{order}}}"
 
 
 def compute_galois_info(polynomial_str):
@@ -154,11 +79,25 @@ def compute_galois_info(polynomial_str):
                 "computation_successful": False
             }
         
+        if poly.degree() >= 12:
+            return {
+                "polynomial": polynomial_str,
+                "degree": int(poly.degree()),
+                "is_irreducible": True,
+                "error": "Polynomials of degree 12 or higher are not supported. Galois group computations for high-degree polynomials can be extremely time-intensive. Please try a polynomial of degree 11 or lower.",
+                "error_type": "degree_too_high",
+                "computation_successful": False
+            }
+
         K = NumberField(poly, names=('a',))
         group = K.galois_group()
         order = int(group.order())
         group_name = str(group)
-        explicit_group = extract_group_notation(group, order)
+        explicit_group = extract_group_notation(group, poly)
+        
+        # Determine the degree (use Galois group order if it's a Galois extension)
+        degree = order
+            
         complex_roots = poly.complex_roots()
         
         roots = []
@@ -219,11 +158,6 @@ def compute_galois_info(polynomial_str):
             
             processed_indices.add(i)
         
-        if group.is_galois():
-            degree = order
-        else:
-            degree = int(poly.degree())
-        
         try:
             is_irreducible = bool(poly.is_irreducible())
         except:
@@ -279,6 +213,13 @@ async def root():
         "version": "4.0.0",
         "backend": "FastAPI with Direct SageMath Import",
         "sage_ready": True,
+        "max_polynomial_degree": 11,
+        "supported_features": [
+            "Galois group computation for irreducible polynomials",
+            "Polynomial root calculation",
+            "LaTeX group notation formatting",
+            "Degree 1-11 polynomials supported"
+        ],
         "docs": "/docs"
     }
 
@@ -384,7 +325,7 @@ if __name__ == "__main__":
     print(f"Order: {order}")
     group_name = str(group)
     print(f"Group Name: {group_name}")
-    explicit_group = extract_group_notation(group, order)
+    explicit_group = extract_group_notation(group, poly)
     print(f"Explicit Group: {explicit_group}")
     complex_roots = poly.complex_roots()
     print(f"Complex Roots: {complex_roots}")'''

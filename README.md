@@ -13,13 +13,16 @@ A modern web application for exploring Galois theory and field extensions. Input
 
 ## Supported Polynomials
 
-The application supports any polynomial with rational coefficients, including:
+The application supports polynomials with rational coefficients up to **degree 11**:
 
 - **Simple forms**: x^n ± c (e.g., x^3-2, x^4+5)
 - **Quadratic-like**: x^4 + ax^2 + b (e.g., x^4-10x^2+1)
 - **General polynomials**: a_n*x^n + ... + a_1*x + a_0 with rational coefficients
 
-**Important**: Polynomials must be irreducible over Q for Galois group computation. The application will detect and notify you if a polynomial is reducible.
+**Important restrictions:**
+- Polynomials must be **irreducible over Q** for Galois group computation
+- **Maximum degree is 11** - higher degree polynomials are computationally prohibitive
+- The application will detect and notify you if a polynomial is reducible or too high degree
 
 ## Technology Stack
 
@@ -135,14 +138,17 @@ curl -X POST "http://localhost:8001/api/galois" \
 
 ## Examples
 
-### Classic Polynomials
+### Classic Polynomials (Degree ≤ 11)
 
-| Polynomial | Galois Group | Description |
-|------------|--------------|-------------|
-| x^2 - 2 | C_2 | Cyclic group of order 2 |
-| x^3 - 2 | S_3 | Symmetric group on 3 elements |
-| x^4 - 10x^2 + 1 | V_4 | Klein four-group |
-| x^5 - 2 | D_5 | Dihedral group of order 10 |
+| Polynomial | Degree | Galois Group | Description |
+|------------|--------|--------------|-------------|
+| x^2 - 2 | 2 | C_2 | Cyclic group of order 2 |
+| x^3 - 2 | 3 | S_3 | Symmetric group on 3 elements |
+| x^4 - 10x^2 + 1 | 4 | V_4 | Klein four-group |
+| x^5 - 2 | 5 | D_5 | Dihedral group of order 10 |
+| x^6 + 3x + 3 | 6 | S_6 | Symmetric group (if irreducible) |
+
+**Note**: Polynomials of degree 12 or higher are not supported due to computational complexity.
 
 ### Input Formats
 - Standard: `x^2-2`, `x^3-8`, `x^4-16`
@@ -156,6 +162,7 @@ The application uses direct SageMath imports within the FastAPI process for maxi
 
 ### Error Handling
 - **Reducible polynomials**: Clear explanation that Galois groups apply to irreducible polynomials
+- **High degree polynomials**: Polynomials of degree ≥12 are rejected with an informative message
 - **Syntax errors**: Helpful feedback for invalid polynomial syntax
 - **Computation timeouts**: Graceful handling of complex computations
 
