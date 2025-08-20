@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import galoisImage from "./assets/galois.jpg";
 import sageMathImage from "./assets/sage-math.jpg";
 
@@ -25,6 +25,180 @@ const MathDisplay = ({ children, inline = false }) => {
   }
   
   return <div dangerouslySetInnerHTML={{ __html: `$$${content}$$` }} />;
+};
+
+// Dynamic sizing component for Galois Group display
+const DynamicSizeMath = ({ children, maxWidth = 300 }) => {
+  const containerRef = useRef(null);
+  const [fontSize, setFontSize] = useState('4xl');
+  const [content, setContent] = useState('');
+  
+  useEffect(() => {
+    if (typeof children === 'string') {
+      setContent(children);
+    } else {
+      setContent(String(children));
+    }
+  }, [children]);
+
+  useEffect(() => {
+    if (!containerRef.current || !content) return;
+
+    const measureText = () => {
+      // Create a temporary element to measure the rendered LaTeX
+      const temp = document.createElement('div');
+      temp.style.visibility = 'hidden';
+      temp.style.position = 'absolute';
+      temp.style.top = '-1000px';
+      temp.style.fontSize = '2.25rem'; // Start with text-4xl equivalent
+      temp.innerHTML = `$$${content}$$`;
+      document.body.appendChild(temp);
+
+      // Trigger MathJax rendering
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([temp]).then(() => {
+          const width = temp.scrollWidth;
+          document.body.removeChild(temp);
+          
+          // Adjust font size based on content width
+          if (width > maxWidth * 1.5) {
+            setFontSize('lg'); // Smallest
+          } else if (width > maxWidth * 1.2) {
+            setFontSize('xl');
+          } else if (width > maxWidth) {
+            setFontSize('2xl');
+          } else if (width > maxWidth * 0.8) {
+            setFontSize('3xl');
+          } else {
+            setFontSize('4xl'); // Original size
+          }
+        }).catch(() => {
+          // Fallback if MathJax fails
+          document.body.removeChild(temp);
+          setFontSize('2xl');
+        });
+      } else {
+        // Fallback without MathJax
+        const width = temp.scrollWidth;
+        document.body.removeChild(temp);
+        
+        if (width > maxWidth) {
+          setFontSize('2xl');
+        } else {
+          setFontSize('4xl');
+        }
+      }
+    };
+
+    // Delay measurement to ensure MathJax has rendered
+    const timer = setTimeout(measureText, 100);
+    return () => clearTimeout(timer);
+  }, [content, maxWidth]);
+
+  useEffect(() => {
+    if (window.MathJax && window.MathJax.typesetPromise) {
+      window.MathJax.typesetPromise();
+    }
+  }, [content, fontSize]);
+
+  const fontSizeClass = {
+    'lg': 'text-lg',
+    'xl': 'text-xl', 
+    '2xl': 'text-2xl',
+    '3xl': 'text-3xl',
+    '4xl': 'text-4xl'
+  }[fontSize] || 'text-2xl';
+
+  return (
+    <div ref={containerRef} className={`${fontSizeClass} font-bold text-purple-900 text-center`}>
+      <div dangerouslySetInnerHTML={{ __html: `$$${content}$$` }} />
+    </div>
+  );
+};
+
+// Wrapping polynomial display component with minimal padding
+const WrappingPolynomialDisplay = ({ children, maxWidth = 280 }) => {
+  const containerRef = useRef(null);
+  const [shouldWrap, setShouldWrap] = useState(false);
+  const [content, setContent] = useState('');
+  
+  useEffect(() => {
+    if (typeof children === 'string') {
+      setContent(children);
+    } else {
+      setContent(String(children));
+    }
+  }, [children]);
+
+  useEffect(() => {
+    if (!containerRef.current || !content) return;
+
+    const measureText = () => {
+      // Create a temporary element to measure the rendered LaTeX
+      const temp = document.createElement('div');
+      temp.style.visibility = 'hidden';
+      temp.style.position = 'absolute';
+      temp.style.top = '-1000px';
+      temp.style.fontSize = '1.125rem'; // text-lg equivalent
+      temp.innerHTML = `$$${content}$$`;
+      document.body.appendChild(temp);
+
+      // Trigger MathJax rendering
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise([temp]).then(() => {
+          const width = temp.scrollWidth;
+          document.body.removeChild(temp);
+          setShouldWrap(width > maxWidth);
+        }).catch(() => {
+          document.body.removeChild(temp);
+          setShouldWrap(content.length > 25); // Reduced from 30 for earlier wrapping
+        });
+      } else {
+        const width = temp.scrollWidth;
+        document.body.removeChild(temp);
+        setShouldWrap(width > maxWidth);
+      }
+    };
+
+    const timer = setTimeout(measureText, 100);
+    return () => clearTimeout(timer);
+  }, [content, maxWidth]);
+
+  const formatPolynomialForWrapping = (poly) => {
+    if (!shouldWrap) return [poly];
+    
+    // Break polynomial at + and - operators, keeping the operators with the following term
+    const parts = poly.split(/(?=[+-])/g).filter(part => part.trim());
+    
+    if (parts.length <= 1) return [poly];
+    
+    // Group parts into lines without overlap - each part goes on only one line
+    const lines = [];
+    for (let i = 0; i < parts.length; i += 3) { // Increment by 3 to avoid overlap
+      const line = parts.slice(i, i + 3).join(''); // Take exactly 3 terms (or remaining)
+      lines.push(line.trim());
+    }
+    
+    return lines.length > 0 ? lines : [poly];
+  };
+
+  useEffect(() => {
+    if (window.MathJax && window.MathJax.typesetPromise) {
+      window.MathJax.typesetPromise();
+    }
+  }, [content, shouldWrap]);
+
+  const lines = formatPolynomialForWrapping(content);
+
+  return (
+    <div ref={containerRef} className="text-lg text-purple-900">
+      {lines.map((line, index) => (
+        <div key={index} className="text-center" style={{ lineHeight: '1.2' }}>
+          <div dangerouslySetInnerHTML={{ __html: `$$${line}$$` }} />
+        </div>
+      ))}
+    </div>
+  );
 };
 
 // Enhanced Input component with LaTeX preview
@@ -367,15 +541,21 @@ export default function GaloisPlayground() {
                   <div className="space-y-4">
                     <div className="bg-gradient-to-r from-purple-100 to-indigo-100 rounded-lg p-4">
                       <h3 className="font-semibold text-purple-800 mb-2">Polynomial</h3>
-                      <div className="text-lg text-purple-900 text-center p-2 bg-white rounded border">
-                        <MathDisplay>{result.polynomial.replace(/\^(\d+)/g, '^{$1}')}</MathDisplay>
+                      <div className="p-2 bg-white rounded border min-h-[50px] flex items-center justify-center">
+                        <div className="text-center max-w-full">
+                          <WrappingPolynomialDisplay maxWidth={280}>
+                            {result.polynomial.replace(/\^(\d+)/g, '^{$1}')}
+                          </WrappingPolynomialDisplay>
+                        </div>
                       </div>
                     </div>
                     
                     <div className="bg-gradient-to-r from-indigo-100 to-purple-100 rounded-lg p-4">
                       <h3 className="font-semibold text-purple-800 mb-2">Galois Group</h3>
-                      <div className="text-4xl font-bold text-purple-900 text-center p-4 bg-white rounded border shadow-inner">
-                        <MathDisplay>{result.galois_group?.explicit || 'N/A'}</MathDisplay>
+                      <div className="p-4 bg-white rounded border shadow-inner min-h-[80px] flex items-center justify-center">
+                        <DynamicSizeMath maxWidth={250}>
+                          {result.galois_group?.explicit || 'N/A'}
+                        </DynamicSizeMath>
                       </div>
                       <div className="text-sm text-purple-700 text-center mt-2 font-medium">
                         Order: {result.galois_group?.order}

@@ -7,7 +7,7 @@ This is the main backend using direct SageMath import for maximum speed
 
 import time
 from typing import Dict, Any, Optional
-from chm_label_to_tex import CHM_LABEL_TO_TEX
+from chm_label_to_tex import extract_group_notation
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -38,28 +38,6 @@ class ComputationResponse(BaseModel):
     computation_successful: bool
     error: Optional[str] = None
 
-def extract_group_notation(group, polynomial):
-    """
-    Convert group pari_label to proper LaTeX notation.
-    Handles pari_label formats like:
-    - D({number}) for dihedral groups
-    - {number}[x]{number} for direct products (like Klein four group)
-    - {number}:{number} for semidirect products
-    - C{number} for cyclic groups
-    - S{number}, A{number} for symmetric/alternating groups
-    - "1" for trivial group
-    """
-    import re
-
-    # Get the pari_label
-    # group_str = re.findall(r'(?<=\().*(?=\))', str(group))
-
-    print(int(polynomial.degree()) - 1, int(str(group).split()[2].split('T')[1]) - 1)
-    latex_str = CHM_LABEL_TO_TEX[int(polynomial.degree()) - 1][int(str(group).split()[2].split('T')[1]) - 1]
-
-    # If no specific pattern matched, return the processed string or fallback
-    return latex_str if latex_str != None else f"G_{{{order}}}"
-
 
 def compute_galois_info(polynomial_str):
     """Compute Galois group information for the given polynomial."""
@@ -71,7 +49,7 @@ def compute_galois_info(polynomial_str):
 
         if not poly.is_irreducible():
             return {
-                "polynomial": polynomial_str,
+                "polynomial": str(poly.factor()),
                 "degree": int(poly.degree()),
                 "is_irreducible": False,
                 "error": "This polynomial is reducible over Q and does not have a single Galois group. Consider its irreducible factors instead.",
@@ -81,7 +59,7 @@ def compute_galois_info(polynomial_str):
         
         if poly.degree() >= 12:
             return {
-                "polynomial": polynomial_str,
+                "polynomial": str(poly.factor()),
                 "degree": int(poly.degree()),
                 "is_irreducible": True,
                 "error": "Polynomials of degree 12 or higher are not supported. Galois group computations for high-degree polynomials can be extremely time-intensive. Please try a polynomial of degree 11 or lower.",
@@ -164,7 +142,7 @@ def compute_galois_info(polynomial_str):
             is_irreducible = "Unknown"
         
         result = {
-            "polynomial": polynomial_str,
+            "polynomial": str(poly.factor()),
             "degree": degree,
             "galois_group": {
                 "order": order,
@@ -182,7 +160,7 @@ def compute_galois_info(polynomial_str):
         
     except Exception as e:
         return {
-            "polynomial": polynomial_str,
+            "polynomial": str(poly.factor()),
             "error": str(e),
             "computation_successful": False
         }
