@@ -6,8 +6,9 @@ body {
   font-family: 'Inter', 'Segoe UI', 'Roboto', sans-serif;
   margin: 0;
   padding: 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
   min-height: 100vh;
+  color: #e5e7eb;
 }
 
 .animate-fadeIn {
@@ -25,34 +26,45 @@ body {
   }
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar - dark theme */
 ::-webkit-scrollbar {
   width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: #374151;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #8b5cf6, #6366f1);
+  background: linear-gradient(180deg, #6b7280, #4b5563);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #7c3aed, #4f46e5);
+  background: linear-gradient(180deg, #9333ea, #7c3aed);
 }
 
-/* Glassmorphism effect */
+/* Dark glassmorphism effect */
 .glass {
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(17, 24, 39, 0.95);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(107, 114, 128, 0.3);
 }
 
-/* Mathematical symbol styling */
+/* Mathematical symbol styling - adjusted for dark theme */
 .math-symbol {
   font-family: 'Times New Roman', serif;
   font-style: italic;
+  color: #e5e7eb;
+}
+
+/* MathJax styling for dark theme */
+.MathJax {
+  color: #e5e7eb !important;
+}
+
+/* Ensure math content is visible on dark backgrounds */
+mjx-container {
+  color: #e5e7eb !important;
 }

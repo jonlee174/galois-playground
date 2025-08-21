@@ -50,7 +50,6 @@ CHM_LABEL_TO_TEX = [
 def extract_group_notation(group, polynomial):
     """Convert group description to proper LaTeX notation."""
 
-    print(int(polynomial.degree()) - 1, int(str(group).split()[2].split('T')[1]) - 1)
     latex_str = CHM_LABEL_TO_TEX[int(polynomial.degree()) - 1][int(str(group).split()[2].split('T')[1]) - 1]
 
     # If no specific pattern matched, return the processed string or fallback
