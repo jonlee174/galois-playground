@@ -35,7 +35,14 @@ CHM_LABEL_TO_TEX = [
      '(((C_3 \\times ((C_3 \\times C_3) \\rtimes C_2)) \\rtimes C_2) \\rtimes C_3) \\rtimes C_2', '(((C_3 \\times ((C_3 \\times C_3) \\rtimes C_2)) \\rtimes C_2) \\rtimes C_3) \\rtimes C_2',
      'S_3 \\wr S_3', '\\mathrm{P}\\Gamma\\mathrm{L}(2,8)', 'A_9', 'S_9'],
     # Degree 10
-    [],
+    ['C_{10} \\cong \\mathbb{Z}/10\\mathbb{Z}', 'D_5', 'D_{10}', 'F_5', 'F_5 \\times C_2', 'D_5 \\times C_5', 'A_5', '(V_4 \\times V_4) \\rtimes C_5', 'D_5 \\times D_5',
+     '(C_5 \\times C_5) \\rtimes C_4', 'A_5 \\times C_2', 'S_5', 'S_5', 'C_2 \\times ((V_4 \\times V_4) \\rtimes C_5)', '((V_4 \\times V_4) \\rtimes C_5) \\rtimes C_2',
+     '((V_4 \\times V_4) \\rtimes C_5) \\rtimes C_2', '((C_5 \\times C_5) \\rtimes C_4) \\rtimes C_2', '(C_5 \\times C_5) \\rtimes C_8', '(D_5 \\times D_5) \\rtimes C_2',
+     '(C_5 \\times C_5) \\rtimes Q_8', '(D_5 \\times D_5) \\rtimes C_2', 'S_5 \\times C_2', 'C_2 \\times ((V_4 \\times V_4) \\rtimes D_5)', '((V_4 \\times V_4) \\rtimes C_5) \\rtimes C_4',
+     '((V_4 \\times V_4) \\rtimes C_5) \\rtimes C_4', '\\mathrm{PSL}(2, 9)', '(D_5 \\wr C_2) \\rtimes C_2', '((C_5 \\times C_5) \\rtimes C_8) \\rtimes C_2',
+     '(((V_4 \\times V_4) \\rtimes C_5) \\rtimes C_4) \\times C_2', '\\mathrm{PGL}(2, 9)', 'M_{10}', 'S_6', 'F_5 \\wr C_2', '(V_4 \\times V_4) \\rtimes A_5', '(A_6 \\rtimes C_2) \\rtimes C_2',
+     'C_2 \\wr A_5', '((V_4 \\times V_4) \\rtimes A_5) \\rtimes C_2', '((V_4 \\times V_4) \\rtimes A_5) \\rtimes C_2', 'C_2 \\wr S_5', 'A_5 \\wr C_2', '((A_5 \\times A_5) \\rtimes C_2) \\rtimes C_2',
+     '(A_5 \\times A_5) \\rtimes C_4', '(S_5 \\times S_5) \\wr C_2', 'A_{10}', 'S_{10}'],
     # Degree 11
     ['C_{11} \\cong \\mathbb{Z}/11\\mathbb{Z}', 'D_{11}', 'C_{11} \\rtimes C_5', 'F_{11} \\cong C_{11} \\rtimes C_{10}', '\\mathrm{PSL}(2, 11)', 'M_{11}', 'A_{11}', 'S_{11}'],
 ]
