@@ -263,7 +263,7 @@ const Button = ({ onClick, disabled, children, className = "" }) => (
   <button
     onClick={onClick}
     disabled={disabled}
-    className={`px-6 py-3 bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white rounded-lg disabled:from-gray-800 disabled:to-gray-700 disabled:cursor-not-allowed transform transition-all duration-200 hover:scale-105 shadow-lg font-semibold border border-gray-600 hover:border-purple-500 ${className}`}
+    className={`px-6 py-3 bg-gradient-to-b from-gray-600 to-gray-700 hover:from-gray-500 hover:to-gray-600 active:from-gray-700 active:to-gray-800 text-white rounded-lg disabled:from-gray-800 disabled:to-gray-900 disabled:cursor-not-allowed transform transition-all duration-150 hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl active:shadow-md font-semibold border border-gray-500 hover:border-purple-400 active:border-gray-600 ring-0 hover:ring-2 hover:ring-purple-500/30 ${className}`}
   >
     {children}
   </button>
@@ -302,8 +302,6 @@ export default function GaloisPlayground() {
         .replace(/(\))([a-zA-Z])/g, '$1*$2')
         // Add * between variable and opening parenthesis: x( -> x*(
         .replace(/([a-zA-Z])(\()/g, '$1*$2')
-        // Add * between variables: xy -> x*y (but be careful with multi-character variables)
-        .replace(/([a-zA-Z])([a-zA-Z])/g, '$1*$2');
     };
 
     const processedPolynomial = preprocessPolynomial(polynomial);
@@ -578,21 +576,53 @@ export default function GaloisPlayground() {
                         Order: {result.galois_group?.order}
                       </div>
                     </div>
-                  </div>
-                  
-                  {/* Right column */}
-                  <div className="space-y-4">
                     <div className="bg-gradient-to-r from-gray-800 to-gray-700 rounded-lg p-4 border border-gray-600">
                       <h3 className="font-semibold text-gray-200 mb-2">Group Details</h3>
                       <div className="text-sm text-gray-300 text-center p-2 bg-gray-900 rounded border border-gray-700 break-words">
                         {result.galois_group?.description || 'N/A'}
                       </div>
                     </div>
-                    
-                    <div className="bg-gradient-to-r from-gray-700 to-gray-800 rounded-lg p-4 border border-gray-600">
-                      <h3 className="font-semibold text-gray-200 mb-2">Field Degree</h3>
-                      <div className="text-xl font-bold text-gray-300 text-center p-2 bg-gray-900 rounded border border-gray-700">
-                        <MathDisplay>{`[\\mathbb{Q}(\\alpha) : \\mathbb{Q}] = ${result.degree || 'N/A'}`}</MathDisplay>
+                  </div>
+                  
+                  {/* Right column */}
+                  <div className="space-y-4">
+                    <div className="bg-gradient-to-r from-gray-800 to-gray-700 rounded-lg p-4 border border-gray-600">
+                      <h3 className="font-semibold text-gray-200 mb-2">Splitting Field</h3>
+                      <div className="text-sm text-gray-300 text-center p-2 bg-gray-900 rounded border border-gray-700 break-words">
+                        {result.splitting_field ? (
+                          <div className="space-y-2 text-left">
+                            <div>
+                              <strong className="text-gray-200">Field:</strong>
+                              <div className="mt-1 text-xs font-mono bg-gray-800 p-2 rounded">
+                                {result.splitting_field.field || 'N/A'}
+                              </div>
+                            </div>
+                            <div>
+                              <strong className="text-gray-200">Degree:</strong> 
+                              <span className="ml-2">
+                                <MathDisplay>{`[\\mathbb{Q}(\\alpha) : \\mathbb{Q}] = ${result.splitting_field.degree || 'N/A'}`}</MathDisplay>
+                              </span>
+                            </div>
+                            {result.splitting_field.defining_polynomial && (
+                              <div>
+                                <strong className="text-gray-200">Defining Polynomial:</strong>
+                                <div className="mt-1 text-xs font-mono bg-gray-800 p-2 rounded">
+                                  {result.splitting_field.defining_polynomial}
+                                </div>
+                              </div>
+                            )}
+                            <div className="text-xs text-gray-400 mt-2 italic">
+                              {result.splitting_field.description || 'The field containing all roots of the polynomial'}
+                            </div>
+                            {result.splitting_field.error && (
+                              <div className="text-xs text-red-400 mt-2">
+                                Error: {result.splitting_field.error}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-gray-400">Splitting field data not available</div>
+                        )}
                       </div>
                     </div>
                   </div>

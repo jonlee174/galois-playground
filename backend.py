@@ -32,6 +32,7 @@ class ComputationResponse(BaseModel):
     polynomial: str
     degree: Optional[int] = None
     galois_group: Optional[Dict[str, Any]] = None
+    splitting_field: Optional[Dict[str, Any]] = None
     roots: Optional[list] = None
     number_field: Optional[str] = None
     is_irreducible: Any = None
@@ -141,6 +142,43 @@ def compute_galois_info(polynomial_str):
         except:
             is_irreducible = "Unknown"
         
+        # Compute splitting field information
+        try:
+            # Try to compute the splitting field
+            splitting_field = poly.splitting_field('b')
+            
+            # Get basic information
+            field_str = str(splitting_field)
+            field_degree = int(splitting_field.degree())
+            
+            # Try to get defining polynomial
+            try:
+                if hasattr(splitting_field, 'defining_polynomial'):
+                    defining_poly = str(splitting_field.defining_polynomial())
+                else:
+                    defining_poly = None
+            except:
+                defining_poly = None
+            
+            splitting_field_info = {
+                "field": field_str,
+                "degree": field_degree,
+                "defining_polynomial": defining_poly,
+                "description": f"The splitting field of {poly} over ℚ",
+                "computed": True
+            }
+            
+        except Exception as e:
+            # Fallback: provide some basic information even if splitting field computation fails
+            splitting_field_info = {
+                "field": f"Splitting field computation failed",
+                "degree": degree,  # Use Galois group order as approximation
+                "defining_polynomial": None,
+                "description": f"Unable to compute splitting field. Error: {str(e)[:50]}...",
+                "computed": False,
+                "error": str(e)
+            }
+        
         result = {
             "polynomial": str(poly.factor()),
             "degree": degree,
@@ -150,6 +188,7 @@ def compute_galois_info(polynomial_str):
                 "structure": group_name,
                 "explicit": explicit_group
             },
+            "splitting_field": splitting_field_info,
             "roots": roots,
             "number_field": str(K),
             "is_irreducible": is_irreducible,
