@@ -283,9 +283,58 @@ const CardContent = ({ children, className = "" }) => (
 
 export default function GaloisPlayground() {
   const [polynomial, setPolynomial] = useState("");
+  const [computeSplittingField, setComputeSplittingField] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [splittingFieldLoading, setSplittingFieldLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [isPollingForSplittingField, setIsPollingForSplittingField] = useState(false);
+
+  // Effect for polling splitting field data
+  useEffect(() => {
+    if (!result || !result.splitting_field || !result.splitting_field.computing) {
+      return;
+    }
+
+    setIsPollingForSplittingField(true);
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch("/api/splitting-field", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ 
+            polynomial: result.polynomial.replace(/\\cdot/g, '*')
+          }),
+        });
+        
+        if (!response.ok) {
+          console.error("Error polling for splitting field data");
+          return;
+        }
+        
+        const data = await response.json();
+        
+        if (data.computation_successful && data.splitting_field) {
+          clearInterval(pollInterval);
+          setIsPollingForSplittingField(false);
+          setResult(prevResult => ({
+            ...prevResult,
+            splitting_field: {
+              ...data.splitting_field,
+              computing: false,
+              computed: true
+            }
+          }));
+        }
+      } catch (error) {
+        console.error("Error polling for splitting field:", error);
+      }
+    }, 2000); // Poll every 2 seconds
+    
+    return () => clearInterval(pollInterval);
+  }, [result]);
 
   const handleSubmit = async () => {
     if (!polynomial.trim()) {
@@ -316,7 +365,10 @@ export default function GaloisPlayground() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ polynomial: processedPolynomial }),
+        body: JSON.stringify({ 
+          polynomial: processedPolynomial,
+          compute_splitting_field: computeSplittingField
+        }),
       });
 
       if (!response.ok) {
@@ -354,6 +406,46 @@ export default function GaloisPlayground() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+  
+  // Function to load splitting field data separately
+  const loadSplittingField = async () => {
+    if (!result || !result.polynomial) return;
+    
+    setSplittingFieldLoading(true);
+    
+    try {
+      const response = await fetch("/api/splitting-field", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          polynomial: result.polynomial.replace(/\\cdot/g, '*')
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log("Splitting field response:", data);
+      
+      if (data.computation_successful && data.splitting_field) {
+        setResult(prevResult => ({
+          ...prevResult,
+          splitting_field: data.splitting_field
+        }));
+      } else {
+        console.error("Splitting field computation failed:", data.error);
+      }
+    } catch (error) {
+      console.error("Error computing splitting field:", error);
+    } finally {
+      setSplittingFieldLoading(false);
     }
   };
 
@@ -437,7 +529,32 @@ export default function GaloisPlayground() {
                 onChange={(e) => setPolynomial(e.target.value)}
                 className="text-lg"
               />
-              <div className="bg-gray-800 rounded-lg p-4 border-l-4 border-purple-500">
+              
+              <div className="mt-4 flex items-center">
+                <div className="relative flex items-center">
+                  <input
+                    type="checkbox"
+                    id="compute-splitting-field"
+                    checked={computeSplittingField}
+                    onChange={(e) => setComputeSplittingField(e.target.checked)}
+                    className="form-checkbox appearance-none w-5 h-5 border-2 border-gray-600 rounded bg-gray-800 checked:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-0 cursor-pointer transition-colors duration-200"
+                    style={{
+                      backgroundImage: computeSplittingField ? 'linear-gradient(to bottom right, #8b5cf6, #7c3aed)' : 'none',
+                      backgroundSize: 'cover',
+                    }}
+                  />
+                  {computeSplittingField && (
+                    <svg className="absolute pointer-events-none w-3 h-3 text-white left-1 top-1" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </div>
+                <label htmlFor="compute-splitting-field" className="ml-2 text-sm font-medium text-gray-300">
+                  Compute splitting field (may be time intensive for higher degree polynomials)
+                </label>
+              </div>
+              
+              <div className="bg-gray-800 rounded-lg p-4 border-l-4 border-purple-500 mt-4">
                 <div className="text-sm text-gray-300 space-y-1">
                   <p><strong className="text-gray-200">Examples:</strong> <MathDisplay inline>{"x^2-2"}</MathDisplay>, <MathDisplay inline>{"x^3-2"}</MathDisplay>, <MathDisplay inline>{"x^4-10x^2+1"}</MathDisplay>, <MathDisplay inline>{"x^5-2"}</MathDisplay>, <MathDisplay inline>{"3x^2+2x+1"}</MathDisplay></p>
                   <p><strong className="text-gray-200">Natural input:</strong> You can write <code className="bg-gray-700 px-1 rounded text-purple-300">3x^2+2x+1</code> instead of <code className="bg-gray-700 px-1 rounded text-purple-300">3*x^2+2*x+1</code> - multiplication signs are optional!</p>
@@ -589,7 +706,13 @@ export default function GaloisPlayground() {
                     <div className="bg-gradient-to-r from-gray-800 to-gray-700 rounded-lg p-4 border border-gray-600">
                       <h3 className="font-semibold text-gray-200 mb-2">Splitting Field</h3>
                       <div className="text-sm text-gray-300 text-center p-2 bg-gray-900 rounded border border-gray-700 break-words">
-                        {result.splitting_field ? (
+                        {(splittingFieldLoading || (result.splitting_field && result.splitting_field.computing) || isPollingForSplittingField) ? (
+                          <div className="flex flex-col items-center justify-center py-6">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mb-2"></div>
+                            <p className="text-gray-300">Computing splitting field...</p>
+                            <p className="text-xs text-gray-400 mt-1">This may take some time for higher degree polynomials</p>
+                          </div>
+                        ) : result.splitting_field && result.splitting_field.computed ? (
                           <div className="space-y-2 text-left">
                             <div>
                               <strong className="text-gray-200">Field:</strong>
@@ -621,7 +744,18 @@ export default function GaloisPlayground() {
                             )}
                           </div>
                         ) : (
-                          <div className="text-gray-400">Splitting field data not available</div>
+                          <div className="text-center py-4">
+                            <p className="text-gray-400 mb-4">Splitting field data not computed</p>
+                            <Button 
+                              onClick={loadSplittingField} 
+                              className="px-4 py-2 text-sm"
+                            >
+                              Compute Splitting Field
+                            </Button>
+                            <p className="text-xs text-gray-500 mt-2">
+                              This computation may be time-intensive for higher degree polynomials
+                            </p>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -632,14 +766,45 @@ export default function GaloisPlayground() {
                 <div className="mt-6 bg-gradient-to-r from-gray-800 to-gray-700 rounded-lg p-6 border border-gray-600">
                   <h3 className="font-semibold text-gray-200 mb-3 text-center">Roots in <MathDisplay inline>{"\\mathbb{C}"}</MathDisplay></h3>
                   <div className="flex flex-wrap justify-center gap-3">
-                    {result.roots && result.roots.map((root, index) => (
-                      <div 
-                        key={index}
-                        className="bg-gray-900 px-4 py-2 rounded-full border-2 border-purple-500 shadow-sm"
-                      >
-                        <MathDisplay inline>{root.replace(/√/g, '\\sqrt{').replace(/∛/g, '\\sqrt[3]{').replace(/⁴√/g, '\\sqrt[4]{').replace(/ω/g, '\\omega').replace(/²/g, '^2').replace(/α/g, '\\alpha').replace(/i/g, '\\mathrm{i}')}</MathDisplay>
-                      </div>
-                    ))}
+                    {result.roots && result.roots.map((root, index) => {
+                      // Format whole number roots as integers
+                      const formattedRoot = root.replace(
+                        /(\d+)\.0+(?!\d)/g, '$1'  // Replace X.0000 with X
+                      ).replace(
+                        /(\d+\.\d*?)0+(?!\d)/g, '$1'  // Remove trailing zeros
+                      ).replace(
+                        /\s\\pm\s(\d+)\.0+i/g, ' \\pm $1i'  // Format "X.0i" as "Xi"
+                      ).replace(
+                        /(\d+)\.0+i/g, '$1i'  // Format "X.0i" as "Xi"
+                      ).replace(
+                        /(?:^|\s)1i(?:$|\s)/g, 'i'  // Format "1i" as just "i"
+                      ).replace(
+                        /\s\\pm\s1i/g, ' \\pm i'  // Format "± 1i" as "± i"
+                      ).replace(
+                        /√/g, '\\sqrt{'
+                      ).replace(
+                        /∛/g, '\\sqrt[3]{'
+                      ).replace(
+                        /⁴√/g, '\\sqrt[4]{'
+                      ).replace(
+                        /ω/g, '\\omega'
+                      ).replace(
+                        /²/g, '^2'
+                      ).replace(
+                        /α/g, '\\alpha'
+                      ).replace(
+                        /i/g, '\\mathrm{i}'
+                      );
+                      
+                      return (
+                        <div 
+                          key={index}
+                          className="bg-gray-900 px-4 py-2 rounded-full border-2 border-purple-500 shadow-sm"
+                        >
+                          <MathDisplay inline>{formattedRoot}</MathDisplay>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </CardContent>
