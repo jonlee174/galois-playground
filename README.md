@@ -45,9 +45,9 @@ The application supports polynomials with rational coefficients up to **degree 1
 ## Installation
 
 ### Prerequisites
-- Python 3.12 or higher
-- Node.js 16 or higher
-- SageMath (via conda)
+- Conda, Miniconda, or Miniforge (for SageMath installation)
+- Node.js 16 or higher and npm
+- Git
 
 ### Setup
 
@@ -57,18 +57,34 @@ The application supports polynomials with rational coefficients up to **degree 1
    cd galois-playground
    ```
 
-2. **Set up SageMath environment**
+2. **Make scripts executable**
    ```bash
-   conda create -n sage sage python=3.12
-   conda activate sage
+   chmod +x start-all.sh start-backend.sh start-frontend.sh
    ```
 
-3. **Install Python dependencies**
+3. **Run the all-in-one startup script**
    ```bash
+   ./start-all.sh
+   ```
+
+   This script will:
+   - Check for and create a SageMath environment if needed
+   - Install required Python dependencies
+   - Install frontend dependencies
+   - Start both backend and frontend servers
+
+### Manual Environment Setup
+
+If you prefer to set up manually:
+
+1. **Set up SageMath environment**
+   ```bash
+   conda create -n sage -c conda-forge sagemath python=3.12
+   conda activate sage
    pip install fastapi uvicorn
    ```
 
-4. **Install frontend dependencies**
+2. **Install frontend dependencies**
    ```bash
    cd ui
    npm install
@@ -78,36 +94,54 @@ The application supports polynomials with rational coefficients up to **degree 1
 ## Usage
 
 ### Quick Start (Recommended)
-Start the backend and frontend:
+Start both backend and frontend with a single command:
+```bash
+# Make scripts executable (one-time setup)
+chmod +x start-all.sh start-backend.sh start-frontend.sh
+
+# Start everything
+./start-all.sh
+```
+
+This will:
+- Check for and install required dependencies
+- Start the backend on http://localhost:8001
+- Start the frontend on http://localhost:3000
+- Use tmux if available to show both processes in a split view
+
+### Individual Start Scripts
+
+You can also start the backend and frontend separately:
+
 ```bash
 # Start backend
 ./start-backend.sh
 
 # In another terminal, start frontend
-cd ui
-npm run dev
+./start-frontend.sh
 ```
-
-This will start:
-- Backend on http://localhost:8001
-- Frontend on http://localhost:3000
 
 ### Manual Start
 
-**Start the backend:**
-```bash
-./start-backend.sh
-```
+If you prefer to run commands manually:
 
-**Or manually:**
+**Backend:**
 ```bash
+# Activate SageMath environment
 conda activate sage
+# (or mamba activate sage)
+
+# Install dependencies if needed
+pip install fastapi uvicorn
+
+# Start backend
 python backend.py
 ```
 
-**Start the frontend:**
+**Frontend:**
 ```bash
 cd ui
+npm install  # First time only
 npm run dev
 ```
 
@@ -284,6 +318,22 @@ The Galois group reveals deep properties about the polynomial and its roots, inc
 - **Memory Usage**: Direct SageMath import uses more memory than subprocess calls
 - **Polynomial Degree**: Computation time grows exponentially with degree
 - **User Experience**: Asynchronous design ensures responsive interface even for complex computations
+
+## Cross-Platform Compatibility
+
+The application is designed to run on various platforms:
+
+- **Linux**: Full support with automatic environment detection
+- **macOS**: Compatible with conda/miniforge installations
+- **Windows**: Works via WSL (Windows Subsystem for Linux) or conda on Windows
+
+The startup scripts automatically:
+
+- Detect your conda/mamba installation
+- Find the appropriate SageMath environment
+- Create the environment if it doesn't exist
+- Install required dependencies
+- Use the appropriate terminal or window management based on your platform
 
 ## License
 
