@@ -6,7 +6,7 @@ body {
   font-family: 'Inter', 'Segoe UI', 'Roboto', sans-serif;
   margin: 0;
   padding: 0;
-  background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+  background: linear-gradient(135deg, #161513 0%, #0a0a0a 100%);
   min-height: 100vh;
   color: #e5e7eb;
 }
@@ -42,12 +42,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #9333ea, #7c3aed);
+  background: linear-gradient(180deg, #b78957, #a1723f);
 }
 
 /* Dark glassmorphism effect */
 .glass {
-  background: rgba(17, 24, 39, 0.95);
+  background: rgba(17, 17, 16, 0.95);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(107, 114, 128, 0.3);
 }

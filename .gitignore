@@ -3,6 +3,7 @@ ssh-key.pub
 
 node_modules
 __pycache__
+ui/dist
 
 *.pyc
 *.log

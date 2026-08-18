@@ -15,49 +15,48 @@ else
     exit 1
 fi
 
-# Try to source conda from standard locations
-if [ -f "$HOME/miniforge3/etc/profile.d/conda.sh" ]; then
-    source "$HOME/miniforge3/etc/profile.d/conda.sh"
-elif [ -f "$HOME/miniconda3/etc/profile.d/conda.sh" ]; then
-    source "$HOME/miniconda3/etc/profile.d/conda.sh"
-elif [ -f "$HOME/anaconda3/etc/profile.d/conda.sh" ]; then
-    source "$HOME/anaconda3/etc/profile.d/conda.sh"
-elif [ -f "/opt/conda/etc/profile.d/conda.sh" ]; then
-    source "/opt/conda/etc/profile.d/conda.sh"
-else
-    # Try to use conda/mamba directly if source failed
-    echo "Could not source conda.sh file, trying to use $CONDA_CMD directly..."
+# Resolve the conda base directory directly from conda/mamba itself,
+# rather than guessing common install paths (fixes non-standard bases
+# such as /opt/miniconda3, and avoids relying on `conda activate`
+# inside a non-interactive script shell, which requires `conda init`
+# to have hooked *this* shell and is easily shadowed by an active venv).
+CONDA_BASE="$($CONDA_CMD info --base 2>/dev/null)"
+if [ -z "$CONDA_BASE" ]; then
+    echo "Error: Could not determine conda base directory."
+    exit 1
 fi
+
+SAGE_ENV_DIR="$CONDA_BASE/envs/sage"
+SAGE_PYTHON="$SAGE_ENV_DIR/bin/python"
 
 # Check if sage environment exists, if not create it
-if ! $CONDA_CMD env list | grep -q "^sage "; then
+if [ ! -x "$SAGE_PYTHON" ]; then
     echo "Sage environment not found. Creating new environment..."
-    $CONDA_CMD create -n sage -y python=3.12
-    $CONDA_CMD activate sage
-    $CONDA_CMD install -y -c conda-forge sagemath
-    pip install fastapi uvicorn
+    $CONDA_CMD create -n sage -y -c conda-forge sage python=3.12
+    "$SAGE_PYTHON" -m pip install fastapi uvicorn
     echo "Sage environment created and dependencies installed."
-else
-    $CONDA_CMD activate sage
 fi
 
-# Check if we're in the correct environment
-if [[ "$CONDA_DEFAULT_ENV" != "sage" ]]; then
-    echo "Warning: Could not activate sage environment with conda."
-    echo "Attempting to continue, but this may fail if SageMath is not in your PATH."
+# Always invoke the sage env's python by absolute path, so an active
+# venv or misconfigured shell hook in the parent shell can't shadow it.
+if [ ! -x "$SAGE_PYTHON" ]; then
+    echo "Error: SageMath environment python not found at $SAGE_PYTHON."
+    echo "Please ensure SageMath is installed correctly."
+    echo "You can install it with: conda create -n sage -c conda-forge sage"
+    exit 1
 fi
 
 # Check if required packages are installed
-python -c "import fastapi, uvicorn" 2>/dev/null || {
+"$SAGE_PYTHON" -c "import fastapi, uvicorn" 2>/dev/null || {
     echo "Installing missing Python dependencies..."
-    pip install fastapi uvicorn
+    "$SAGE_PYTHON" -m pip install fastapi uvicorn
 }
 
 # Check if SageMath is available
-python -c "import sage.all" 2>/dev/null || {
-    echo "Error: SageMath not found in the current Python environment."
+"$SAGE_PYTHON" -c "import sage.all" 2>/dev/null || {
+    echo "Error: SageMath not found in the sage environment's Python."
     echo "Please ensure SageMath is installed correctly."
-    echo "You can install it with: conda install -c conda-forge sagemath"
+    echo "You can install it with: conda create -n sage -c conda-forge sage"
     exit 1
 }
 
@@ -65,4 +64,4 @@ echo "Environment ready. Starting backend server..."
 echo ""
 
 # Start the backend
-python backend.py
+"$SAGE_PYTHON" backend.py

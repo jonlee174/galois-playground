@@ -42,6 +42,7 @@ class ComputationResponse(BaseModel):
     is_irreducible: Any = None
     computation_successful: bool
     error: Optional[str] = None
+    error_type: Optional[str] = None
 
 class SplittingFieldResponse(BaseModel):
     polynomial: str
@@ -153,7 +154,32 @@ def compute_galois_info(polynomial_str, compute_splitting_field=False):
         order = int(group.order())
         group_name = str(group)
         explicit_group = extract_group_notation(group, poly)
-        
+
+        # Group-theoretic properties, looked up on the abstract TransitiveGroup
+        # rather than called on `group` directly: the latter needs to materialize
+        # explicit permutation generators via PARI's galoisinit on the full Galois
+        # closure, which is cheap for small groups but can blow the PARI stack for
+        # larger ones (e.g. S5). The transitive-group library has these properties
+        # precomputed, so this stays fast and safe at every supported degree.
+        try:
+            transitive_num = int(group.transitive_number())
+            TG = TransitiveGroup(int(poly.degree()), transitive_num)
+            is_abelian = bool(TG.is_abelian())
+            is_solvable = bool(TG.is_solvable())
+            transitive_label = f"{int(poly.degree())}T{transitive_num}"
+        except Exception:
+            is_abelian = None
+            is_solvable = None
+            transitive_label = None
+
+        try:
+            discriminant = poly.discriminant()
+            discriminant_str = str(discriminant)
+            is_square_discriminant = bool(QQ(discriminant).is_square())
+        except Exception:
+            discriminant_str = None
+            is_square_discriminant = None
+
         degree = order
             
         complex_roots = poly.complex_roots()
@@ -229,7 +255,13 @@ def compute_galois_info(polynomial_str, compute_splitting_field=False):
                 "order": order,
                 "description": group_name,
                 "structure": group_name,
-                "explicit": explicit_group
+                "explicit": explicit_group,
+                "is_abelian": is_abelian,
+                "is_solvable": is_solvable,
+                "transitive_label": transitive_label,
+                "discriminant": discriminant_str,
+                "is_square_discriminant": is_square_discriminant,
+                "polynomial_degree": int(poly.degree())
             },
             "roots": roots,
             "number_field": str(K),

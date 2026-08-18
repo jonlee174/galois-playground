@@ -21,6 +21,7 @@ The application supports polynomials with rational coefficients up to **degree 1
 - **General polynomials**: a_n*x^n + ... + a_1*x + a_0 with rational coefficients
 
 **Important restrictions:**
+
 - Polynomials must be **irreducible over ℚ** for Galois group computation
 - **Maximum degree is 11** - higher degree polynomials are computationally prohibitive
 - Splitting field computation is optional and may be time-intensive for higher degrees
@@ -29,6 +30,7 @@ The application supports polynomials with rational coefficients up to **degree 1
 ## Technology Stack
 
 ### Backend
+
 - **Python 3.12+** with SageMath
 - **FastAPI** for REST API endpoints
 - **Direct SageMath import** for maximum performance (no subprocess overhead)
@@ -36,6 +38,7 @@ The application supports polynomials with rational coefficients up to **degree 1
 - **Asynchronous computation** for splitting fields
 
 ### Frontend
+
 - **React 18** with modern hooks
 - **Vite** for development and building
 - **Tailwind CSS** for responsive styling
@@ -45,6 +48,7 @@ The application supports polynomials with rational coefficients up to **degree 1
 ## Installation
 
 ### Prerequisites
+
 - Conda, Miniconda, or Miniforge (for SageMath installation)
 - Node.js 16 or higher and npm
 - Git
@@ -52,22 +56,24 @@ The application supports polynomials with rational coefficients up to **degree 1
 ### Setup
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/jonlee174/galois-playground.git
    cd galois-playground
    ```
-
 2. **Make scripts executable**
+
    ```bash
    chmod +x start-all.sh start-backend.sh start-frontend.sh
    ```
-
 3. **Run the all-in-one startup script**
+
    ```bash
    ./start-all.sh
    ```
 
    This script will:
+
    - Check for and create a SageMath environment if needed
    - Install required Python dependencies
    - Install frontend dependencies
@@ -78,13 +84,14 @@ The application supports polynomials with rational coefficients up to **degree 1
 If you prefer to set up manually:
 
 1. **Set up SageMath environment**
+
    ```bash
-   conda create -n sage -c conda-forge sagemath python=3.12
+   conda create -n sage -c conda-forge sage python=3.12
    conda activate sage
    pip install fastapi uvicorn
    ```
-
 2. **Install frontend dependencies**
+
    ```bash
    cd ui
    npm install
@@ -94,7 +101,9 @@ If you prefer to set up manually:
 ## Usage
 
 ### Quick Start (Recommended)
+
 Start both backend and frontend with a single command:
+
 ```bash
 # Make scripts executable (one-time setup)
 chmod +x start-all.sh start-backend.sh start-frontend.sh
@@ -104,6 +113,7 @@ chmod +x start-all.sh start-backend.sh start-frontend.sh
 ```
 
 This will:
+
 - Check for and install required dependencies
 - Start the backend on http://localhost:8001
 - Start the frontend on http://localhost:3000
@@ -126,6 +136,7 @@ You can also start the backend and frontend separately:
 If you prefer to run commands manually:
 
 **Backend:**
+
 ```bash
 # Activate SageMath environment
 conda activate sage
@@ -139,6 +150,7 @@ python backend.py
 ```
 
 **Frontend:**
+
 ```bash
 cd ui
 npm install  # First time only
@@ -169,6 +181,7 @@ curl -X POST "http://localhost:8001/api/galois" \
 ```
 
 **Response example:**
+
 ```json
 {
   "polynomial": "x^4-10*x^2+1",
@@ -195,6 +208,7 @@ curl -X POST "http://localhost:8001/api/splitting-field" \
 ```
 
 **Response example:**
+
 ```json
 {
   "polynomial": "x^4 - 10*x^2 + 1",
@@ -214,27 +228,30 @@ curl -X POST "http://localhost:8001/api/splitting-field" \
 
 ### Classic Polynomials (Degree ≤ 11)
 
-| Polynomial | Degree | Galois Group | Description |
-|------------|--------|--------------|-------------|
-| x^2 - 2 | 2 | C_2 | Cyclic group of order 2 |
-| x^3 - 2 | 3 | S_3 | Symmetric group on 3 elements |
-| x^4 - 10x^2 + 1 | 4 | V_4 | Klein four-group |
-| x^5 - 2 | 5 | F_5 | Frobenius group of order 20 |
-| x^5 - x - 1 | 5 | S_5 | Symmetric group on 5 elements |
-| x^6 - 3x^3 + 1 | 6 | D_6 | Dihedral group of order 12 |
-| x^8 - 2 | 8 | (C_2×C_2×C_2)⋊C_7 | Affine group |
-| x^11 - 1 | 11 | C_10 | Cyclic group of order 10 |
+| Polynomial      | Degree | Galois Group         | Description                   |
+| --------------- | ------ | -------------------- | ----------------------------- |
+| x^2 - 2         | 2      | C_2                  | Cyclic group of order 2       |
+| x^3 - 2         | 3      | S_3                  | Symmetric group on 3 elements |
+| x^4 - 10x^2 + 1 | 4      | V_4                  | Klein four-group              |
+| x^5 - 2         | 5      | F_5                  | Frobenius group of order 20   |
+| x^5 - x - 1     | 5      | S_5                  | Symmetric group on 5 elements |
+| x^6 - 3x^3 + 1  | 6      | D_6                  | Dihedral group of order 12    |
+| x^8 - 2         | 8      | (C_2×C_2×C_2)⋊C_7 | Affine group                  |
+| x^11 - 1        | 11     | C_10                 | Cyclic group of order 10      |
 
 **Note**: Polynomials of degree 12 or higher are not supported due to computational complexity.
 
 ### Input Formats
+
 - Standard: `x^2-2`, `x^3-8`, `x^4-16`
 - With spaces: `x^2 - 2`, `x^3 - 8`
 - With coefficients: `3x^2+2x+1` (multiplication signs are optional)
 - Complex: `x^4 - 10*x^2 + 1`, `x^6 + 3*x^3 - 1`
 
 ### Displaying Roots
+
 The application uses elegant mathematical notation for roots:
+
 - Conjugate pairs shown as `a ± bi` instead of separate entries
 - Real pairs shown as `±c` instead of separate entries
 - Individual roots in decimal format with 6 decimal places
@@ -242,20 +259,24 @@ The application uses elegant mathematical notation for roots:
 ## Architecture
 
 ### Direct SageMath Integration
+
 The application uses direct SageMath imports within the FastAPI process for maximum performance, eliminating the subprocess startup overhead that would otherwise be present. This results in much faster computation times.
 
 ### Asynchronous Splitting Field Computation
+
 - **Two-phase computation**: Galois group is computed and returned quickly, with splitting field computed separately
 - **Optional computation**: Users can choose whether to compute the potentially time-intensive splitting field
 - **Polling mechanism**: Frontend polls the backend for splitting field results when requested
 
 ### Error Handling
+
 - **Reducible polynomials**: Clear explanation that Galois groups apply to irreducible polynomials
 - **High degree polynomials**: Polynomials of degree ≥12 are rejected with an informative message
 - **Syntax errors**: Helpful feedback for invalid polynomial syntax
 - **Computation timeouts**: Graceful handling of complex computations
 
 ### User Interface Features
+
 - **LaTeX Preview**: Real-time preview of polynomial inputs with LaTeX formatting
 - **Dynamic sizing**: Automatic sizing adjustment for complex mathematical expressions
 - **Responsive design**: Works well on different screen sizes
@@ -264,6 +285,7 @@ The application uses direct SageMath imports within the FastAPI process for maxi
 ## Development
 
 ### Project Structure
+
 ```
 galois-playground/
 ├── backend.py                # FastAPI backend with direct SageMath import
@@ -283,6 +305,7 @@ galois-playground/
 ```
 
 ### API Endpoints
+
 - `GET /` - Server information and capabilities
 - `GET /api/test` - Backend health check and SageMath verification
 - `POST /api/galois` - Compute Galois group information
@@ -290,6 +313,7 @@ galois-playground/
 - `GET /health` - Service health status
 
 ### Contributing
+
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
@@ -307,6 +331,7 @@ This application explores **Galois theory**, which establishes a fundamental con
 - **Automorphisms**: Structure-preserving bijections from a field to itself
 
 The Galois group reveals deep properties about the polynomial and its roots, including:
+
 - Whether the polynomial can be solved by radicals
 - The structure of the field extension created by adjoining the roots
 - Symmetries among the roots of the polynomial
