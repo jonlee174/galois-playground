@@ -1,0 +1,3 @@
+passagemath-standard
+fastapi
+uvicorn

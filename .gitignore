@@ -4,6 +4,7 @@ ssh-key.pub
 node_modules
 __pycache__
 ui/dist
+.venv
 
 *.pyc
 *.log

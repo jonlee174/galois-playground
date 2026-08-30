@@ -31,7 +31,7 @@ The application supports polynomials with rational coefficients up to **degree 1
 
 ### Backend
 
-- **Python 3.12+** with SageMath
+- **Python 3.11-3.14** with SageMath (via [passagemath](https://github.com/passagemath/passagemath), installed with pip - no conda required)
 - **FastAPI** for REST API endpoints
 - **Direct SageMath import** for maximum performance (no subprocess overhead)
 - **Uvicorn** ASGI server
@@ -49,7 +49,7 @@ The application supports polynomials with rational coefficients up to **degree 1
 
 ### Prerequisites
 
-- Conda, Miniconda, or Miniforge (for SageMath installation)
+- Python 3.11-3.14
 - Node.js 16 or higher and npm
 - Git
 
@@ -83,13 +83,18 @@ The application supports polynomials with rational coefficients up to **degree 1
 
 If you prefer to set up manually:
 
-1. **Set up SageMath environment**
+1. **Set up a Python virtual environment**
 
    ```bash
-   conda create -n sage -c conda-forge sage python=3.12
-   conda activate sage
-   pip install fastapi uvicorn
+   python3 -m venv .venv
+   source .venv/bin/activate
+   pip install -r requirements.txt
    ```
+
+   This installs [passagemath](https://github.com/passagemath/passagemath), a pip-installable,
+   drop-in-compatible fork of SageMath that ships prebuilt wheels for Linux, macOS, and
+   Windows - so `sage.all` becomes importable without conda, Miniforge, or a system SageMath
+   install. It's a large download (several GB) and can take a few minutes the first time.
 2. **Install frontend dependencies**
 
    ```bash
@@ -138,12 +143,11 @@ If you prefer to run commands manually:
 **Backend:**
 
 ```bash
-# Activate SageMath environment
-conda activate sage
-# (or mamba activate sage)
+# Activate the virtual environment
+source .venv/bin/activate
 
 # Install dependencies if needed
-pip install fastapi uvicorn
+pip install -r requirements.txt
 
 # Start backend
 python backend.py
@@ -349,15 +353,14 @@ The Galois group reveals deep properties about the polynomial and its roots, inc
 The application is designed to run on various platforms:
 
 - **Linux**: Full support with automatic environment detection
-- **macOS**: Compatible with conda/miniforge installations
-- **Windows**: Works via WSL (Windows Subsystem for Linux) or conda on Windows
+- **macOS**: Full support via prebuilt passagemath wheels (Intel and Apple Silicon)
+- **Windows**: Works via WSL (Windows Subsystem for Linux)
 
 The startup scripts automatically:
 
-- Detect your conda/mamba installation
-- Find the appropriate SageMath environment
-- Create the environment if it doesn't exist
-- Install required dependencies
+- Find a suitable Python 3 interpreter
+- Create a local virtual environment (`.venv`) if it doesn't exist
+- Install required dependencies (SageMath via passagemath, FastAPI, Uvicorn)
 - Use the appropriate terminal or window management based on your platform
 
 ## License
