@@ -2,23 +2,60 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Modern No. 20 (Regular only; there is no bold cut). Picked up from a system
+   install, or from ui/public/fonts/ModernNo20.ttf (gitignored, since the font
+   ships with Microsoft Office and isn't ours to redistribute). The single
+   400 face is declared for the whole weight range so nothing renders faux-bold. */
+@font-face {
+  font-family: "Modern No. 20";
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  src: local("Modern No. 20"), local("Modern-Regular"), url("/fonts/ModernNo20.ttf") format("truetype");
+}
+
+:root {
+  --ink: #0b0a09;
+  --paper: #ebe7e1;
+  --tan: #c19d6c;
+}
+
+html {
+  color-scheme: dark;
+  /* Modern No. 20 has a small x-height; nudge every rem-based size up a bit. */
+  font-size: 17px;
+}
+
 body {
-  font-family: 'Inter', 'Segoe UI', 'Roboto', sans-serif;
   margin: 0;
   padding: 0;
-  background: linear-gradient(135deg, #161513 0%, #0a0a0a 100%);
   min-height: 100vh;
-  color: #e5e7eb;
+  background: var(--ink);
+  color: var(--paper);
+  letter-spacing: 0.01em;
+  /* Single-weight display faces look smeared with faux bold/italic. */
+  font-synthesis: none;
+}
+
+/* Text inputs only: plain Times New Roman, so typed polynomials read as input
+   rather than display type. */
+input,
+textarea {
+  font-family: "Times New Roman", Times, serif;
+}
+
+::selection {
+  background: rgba(193, 157, 108, 0.35);
 }
 
 .animate-fadeIn {
-  animation: fadeIn 0.6s ease-out;
+  animation: fadeIn 0.35s ease-out;
 }
 
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -26,45 +63,44 @@ body {
   }
 }
 
-/* Custom scrollbar - dark theme */
+/* Modern No. 20 has no bold cut: thicken strokes with an outline in the text's
+   own color instead of letting the browser synthesize a smeared faux bold. */
+.text-heavy {
+  -webkit-text-stroke: 0.045em currentColor;
+}
+
+/* Square scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
-
 ::-webkit-scrollbar-track {
-  background: #374151;
-  border-radius: 4px;
+  background: #1c1a18;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #6b7280, #4b5563);
-  border-radius: 4px;
+  background: #3f3b36;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #b78957, #a1723f);
+  background: var(--tan);
 }
 
-/* Dark glassmorphism effect */
-.glass {
-  background: rgba(17, 17, 16, 0.95);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(107, 114, 128, 0.3);
+/* Square spinner: a rotating hollow square instead of a rounded ring. */
+.spinner-square {
+  display: inline-block;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-/* Mathematical symbol styling - adjusted for dark theme */
-.math-symbol {
-  font-family: 'Times New Roman', serif;
-  font-style: italic;
-  color: #e5e7eb;
-}
-
-/* MathJax styling for dark theme */
-.MathJax {
-  color: #e5e7eb !important;
-}
-
-/* Ensure math content is visible on dark backgrounds */
+/* MathJax output follows the surrounding text color and keeps its own fonts. */
 mjx-container {
-  color: #e5e7eb !important;
+  color: inherit !important;
+}
+mjx-container[display="true"] {
+  margin: 0.25em 0 !important;
 }

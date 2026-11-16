@@ -1,6 +1,8 @@
 ssh-key
 ssh-key.pub
 
+.pixi/
+.venv/
 node_modules
 __pycache__
 ui/dist
@@ -8,3 +10,8 @@ ui/dist
 *.pyc
 *.log
 *.cpython-312.pyc
+# Licensed fonts (Modern No. 20 ships with Microsoft Office; not redistributable)
+ui/public/fonts/*.ttf
+ui/public/fonts/*.otf
+ui/public/fonts/*.woff
+ui/public/fonts/*.woff2

@@ -1,7 +1,11 @@
-import MathDisplay from "./math/MathDisplay";
+import MathDisplay, { Rationals } from "./math/MathDisplay";
 import MathInput from "./math/MathInput";
-import { Button, Card, CardContent } from "./ui/primitives";
+import { Button, Card, CardContent, Spinner } from "./ui/primitives";
 import { WarningIcon } from "./icons";
+
+const EXAMPLES = ["x^2-2", "x^3-2", "x^4-10x^2+1", "x^4-2", "x^5-2", "x^4-x-1", "x^8-2"];
+
+const Code = ({ children }) => <code className="bg-gray-900 border border-gray-800 px-1 text-accent-300">{children}</code>;
 
 export default function PolynomialForm({
   polynomial,
@@ -12,105 +16,77 @@ export default function PolynomialForm({
   onSubmit,
 }) {
   return (
-    <Card className="shadow-2xl border border-gray-800">
-      <CardContent className="space-y-6 pt-8">
-        <div className="space-y-4">
-          <label className="block text-lg font-semibold text-gray-100 mb-2">
-            Enter a Polynomial over <MathDisplay inline>{"\\mathbb{Q}"}</MathDisplay>
-          </label>
-          <MathInput
-            placeholder="e.g., x^2-2, x^3-8, x^4-16, x^2+1, 3x^2+2x+1"
-            value={polynomial}
-            onChange={(e) => onPolynomialChange(e.target.value)}
-            className="text-lg"
-          />
+    <Card>
+      <CardContent className="space-y-5">
+        <label className="block text-lg text-gray-50">
+          Enter a polynomial over <Rationals />
+        </label>
 
-          <div className="mt-4 flex items-center">
-            <div className="relative flex items-center">
-              <input
-                type="checkbox"
-                id="compute-splitting-field"
-                checked={computeSplittingField}
-                onChange={(e) => onComputeSplittingFieldChange(e.target.checked)}
-                className="form-checkbox appearance-none w-5 h-5 border-2 border-gray-600 rounded bg-gray-900 checked:border-accent-500 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-0 cursor-pointer transition-colors duration-200"
-                style={{
-                  backgroundImage: computeSplittingField
-                    ? "linear-gradient(to bottom right, #b78957, #875c34)"
-                    : "none",
-                  backgroundSize: "cover",
-                }}
-              />
-              {computeSplittingField && (
-                <svg
-                  className="absolute pointer-events-none w-3 h-3 text-white left-1 top-1"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              )}
-            </div>
-            <label htmlFor="compute-splitting-field" className="ml-2 text-sm font-medium text-gray-300">
-              Compute splitting field (may be time intensive for higher degree polynomials)
-            </label>
-          </div>
+        <MathInput
+          placeholder="e.g. x^3-2, x^4-10x^2+1, 3x^2+2x+1"
+          value={polynomial}
+          onChange={(e) => onPolynomialChange(e.target.value)}
+          onSubmit={onSubmit}
+          className="text-lg"
+        />
 
-          <div className="bg-gray-900/70 rounded-lg p-4 border-l-4 border-accent-500 mt-4">
-            <div className="text-sm text-gray-300 space-y-1">
-              <p>
-                <strong className="text-gray-100">Examples:</strong>{" "}
-                <MathDisplay inline>{"x^2-2"}</MathDisplay>, <MathDisplay inline>{"x^3-2"}</MathDisplay>,{" "}
-                <MathDisplay inline>{"x^4-10x^2+1"}</MathDisplay>, <MathDisplay inline>{"x^5-2"}</MathDisplay>,{" "}
-                <MathDisplay inline>{"3x^2+2x+1"}</MathDisplay>
-              </p>
-              <p>
-                <strong className="text-gray-100">Natural input:</strong> You can write{" "}
-                <code className="bg-gray-800 px-1 rounded text-accent-300">3x^2+2x+1</code> instead of{" "}
-                <code className="bg-gray-800 px-1 rounded text-accent-300">3*x^2+2*x+1</code> - multiplication
-                signs are optional!
-              </p>
-              <p>
-                <strong className="text-gray-100">Note:</strong> Spaces are optional - both "x^2-2" and "x^2 - 2"
-                work perfectly!
-              </p>
-              <p>
-                <strong className="text-gray-100">Supported:</strong> Any polynomial with rational coefficients,
-                including:
-              </p>
-              <div className="ml-4 space-y-1">
-                <p>
-                  • Simple forms: <MathDisplay inline>{"x^n \\pm c"}</MathDisplay> (e.g.,{" "}
-                  <MathDisplay inline>{"x^3-2, x^4+5"}</MathDisplay>)
-                </p>
-                <p>
-                  • With coefficients: <MathDisplay inline>{"ax^n + bx^{n-1} + \\ldots"}</MathDisplay> (e.g.,{" "}
-                  <MathDisplay inline>{"3x^3+2x^2-x+1"}</MathDisplay>)
-                </p>
-                <p>
-                  • Quadratic-like: <MathDisplay inline>{"x^4 + ax^2 + b"}</MathDisplay> (e.g.,{" "}
-                  <MathDisplay inline>{"x^4-10x^2+1"}</MathDisplay>)
-                </p>
-                <p className="text-accent-300 font-medium flex items-center gap-1.5">
-                  <WarningIcon className="w-4 h-4 shrink-0" />
-                  Polynomial must be irreducible over ℚ for Galois group computation
-                </p>
-              </div>
-            </div>
-          </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs uppercase tracking-widest text-gray-500 mr-1">Try</span>
+          {EXAMPLES.map((ex) => (
+            <button
+              key={ex}
+              type="button"
+              onClick={() => onPolynomialChange(ex)}
+              className="px-2 py-1 border border-gray-800 bg-black text-gray-200 hover:border-accent-400 hover:text-accent-300 transition-colors duration-100"
+            >
+              <MathDisplay inline>{ex.replace(/\^(\d+)/g, "^{$1}")}</MathDisplay>
+            </button>
+          ))}
         </div>
 
-        <Button onClick={onSubmit} disabled={loading} className="w-full text-lg py-4">
+        <label htmlFor="compute-splitting-field" className="flex items-center gap-3 cursor-pointer select-none w-fit">
+          <input
+            type="checkbox"
+            id="compute-splitting-field"
+            checked={computeSplittingField}
+            onChange={(e) => onComputeSplittingFieldChange(e.target.checked)}
+            className="peer sr-only"
+          />
+          <span className="w-4 h-4 shrink-0 border border-gray-500 bg-black flex items-center justify-center peer-checked:border-accent-400 peer-focus-visible:outline peer-focus-visible:outline-1 peer-focus-visible:outline-accent-400">
+            {computeSplittingField && <span className="w-2 h-2 bg-accent-400" />}
+          </span>
+          <span className="text-sm text-gray-300">
+            Also compute the splitting field (slow for higher degrees)
+          </span>
+        </label>
+
+        <div className="border-l-2 border-accent-400 bg-black p-4 text-sm text-gray-300 space-y-1.5">
+          <p>
+            <span className="text-gray-100">Natural input:</span> <Code>3x^2+2x+1</Code> works as well as{" "}
+            <Code>3*x^2+2*x+1</Code>, and spaces are optional.
+          </p>
+          <p>
+            <span className="text-gray-100">Supported:</span> any polynomial with rational coefficients of degree at
+            most 11, e.g. <MathDisplay inline>{"x^n \\pm c"}</MathDisplay>,{" "}
+            <MathDisplay inline>{"x^4 + ax^2 + b"}</MathDisplay>,{" "}
+            <MathDisplay inline>{"a_nx^n + \\cdots + a_0"}</MathDisplay>.
+          </p>
+          <p className="text-accent-300 flex items-center gap-1.5">
+            <WarningIcon className="w-4 h-4 shrink-0" />
+            <span>
+              The polynomial must be irreducible over <Rationals />.
+            </span>
+          </p>
+        </div>
+
+        <Button onClick={onSubmit} disabled={loading} className="w-full text-xl py-4 text-heavy">
           {loading ? (
-            <div className="flex items-center justify-center space-x-2">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              <span>Computing Galois Group...</span>
-            </div>
+            <span className="flex items-center justify-center gap-3">
+              <Spinner className="w-4 h-4" />
+              Computing…
+            </span>
           ) : (
-            "Compute Galois Group"
+            "Compute"
           )}
         </Button>
       </CardContent>

@@ -1,26 +1,29 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AboutCard from "./components/AboutCard";
 import ErrorCard from "./components/ErrorCard";
+import Footer from "./components/Footer";
 import Header from "./components/Header";
+import LatticeCard from "./components/LatticeCard";
 import PolynomialForm from "./components/PolynomialForm";
 import ResultsCard from "./components/ResultsCard";
 
 const SPLITTING_FIELD_POLL_INTERVAL_MS = 2000;
 
-async function fetchSplittingField(polynomial) {
-  const response = await fetch("/api/splitting-field", {
+async function postJson(url, body) {
+  const response = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ polynomial: polynomial.replace(/\\cdot/g, "*") }),
+    body: JSON.stringify(body),
   });
-
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
   }
-
   return response.json();
 }
+
+const fetchSplittingField = (polynomial) =>
+  postJson("/api/splitting-field", { polynomial: polynomial.replace(/\\cdot/g, "*") });
 
 // Adds implicit multiplication signs so "3x^2+2x+1" parses like "3*x^2+2*x+1".
 const preprocessPolynomial = (poly) =>
@@ -29,7 +32,7 @@ const preprocessPolynomial = (poly) =>
     .replace(/(\))([a-zA-Z])/g, "$1*$2")
     .replace(/([a-zA-Z])(\()/g, "$1*$2");
 
-export default function GaloisPlayground() {
+export default function App() {
   const [polynomial, setPolynomial] = useState("");
   const [computeSplittingField, setComputeSplittingField] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -37,6 +40,10 @@ export default function GaloisPlayground() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [isPollingForSplittingField, setIsPollingForSplittingField] = useState(false);
+  const [lattice, setLattice] = useState(null);
+  const [latticeLoading, setLatticeLoading] = useState(false);
+  const [latticeError, setLatticeError] = useState(null);
+  const requestId = useRef(0);
 
   // Poll for the splitting field once the main computation has kicked it off.
   useEffect(() => {
@@ -62,41 +69,40 @@ export default function GaloisPlayground() {
     return () => clearInterval(pollInterval);
   }, [result]);
 
+  const loadLattice = async (poly, id) => {
+    setLatticeLoading(true);
+    try {
+      const data = await postJson("/api/lattice", { polynomial: poly });
+      if (requestId.current === id) setLattice(data);
+    } catch (err) {
+      if (requestId.current === id) setLatticeError(err.message);
+    } finally {
+      if (requestId.current === id) setLatticeLoading(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!polynomial.trim()) {
       setError({ type: "computation", message: "Please enter a polynomial" });
       return;
     }
 
+    const id = ++requestId.current;
+    const poly = preprocessPolynomial(polynomial);
     setLoading(true);
     setResult(null);
     setError(null);
+    setLattice(null);
+    setLatticeError(null);
+    setLatticeLoading(false);
 
     try {
-      const response = await fetch("/api/galois", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          polynomial: preprocessPolynomial(polynomial),
-          compute_splitting_field: computeSplittingField,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await postJson("/api/galois", { polynomial: poly, compute_splitting_field: computeSplittingField });
+      if (requestId.current !== id) return;
 
       if (!data.computation_successful) {
         if (data.error_type === "reducible_polynomial") {
-          setError({
-            type: "reducible",
-            message: data.error,
-            polynomial: data.polynomial,
-            degree: data.degree,
-          });
+          setError({ type: "reducible", message: data.error, polynomial: data.polynomial, degree: data.degree });
         } else {
           setError({ type: "computation", message: data.error || "Computation failed for unknown reason" });
         }
@@ -104,11 +110,12 @@ export default function GaloisPlayground() {
       }
 
       setResult(data);
+      loadLattice(poly, id);
     } catch (err) {
       console.error("Error calling backend:", err);
       setError({ type: "network", message: `Network error: ${err.message}` });
     } finally {
-      setLoading(false);
+      if (requestId.current === id) setLoading(false);
     }
   };
 
@@ -131,17 +138,18 @@ export default function GaloisPlayground() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-black to-gray-950">
-      <div className="absolute inset-0 opacity-20">
-        <div
-          className="w-full h-full"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='1.5'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          }}
-        ></div>
-      </div>
+    <div className="min-h-screen bg-black">
+      {/* Faint square grid backdrop */}
+      <div
+        className="fixed inset-0 pointer-events-none opacity-[0.07]"
+        style={{
+          backgroundImage:
+            "linear-gradient(#c19d6c 1px, transparent 1px), linear-gradient(90deg, #c19d6c 1px, transparent 1px)",
+          backgroundSize: "48px 48px",
+        }}
+      />
 
-      <div className="relative z-10 max-w-6xl mx-auto p-6 space-y-8">
+      <main className="relative z-10 max-w-6xl mx-auto px-4 py-8 md:p-8 space-y-6">
         <Header />
 
         <PolynomialForm
@@ -163,10 +171,13 @@ export default function GaloisPlayground() {
               isPollingForSplittingField={isPollingForSplittingField}
               onComputeSplittingField={loadSplittingField}
             />
+            <LatticeCard key={result.polynomial} lattice={lattice} loading={latticeLoading} error={latticeError} />
             <AboutCard />
           </>
         )}
-      </div>
+
+        <Footer />
+      </main>
     </div>
   );
 }

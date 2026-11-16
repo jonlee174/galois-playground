@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Galois Playground Backend
+Correspondence Backend
 This is the main backend using direct SageMath import for maximum speed
 """
 
@@ -22,6 +22,8 @@ os.environ['PARI_SIZE'] = '2000000000'
 
 # Import SageMath directly - this eliminates startup overhead completely
 from sage.all import * # type: ignore
+from lattice import compute_lattice
+from roots import describe_roots
 
 
 # Request/Response models
@@ -32,12 +34,17 @@ class PolynomialRequest(BaseModel):
 class SplittingFieldRequest(BaseModel):
     polynomial: str
 
+class LatticeRequest(BaseModel):
+    polynomial: str
+
 class ComputationResponse(BaseModel):
     polynomial: str
+    polynomial_latex: Optional[str] = None
     degree: Optional[int] = None
     galois_group: Optional[Dict[str, Any]] = None
     splitting_field: Optional[Dict[str, Any]] = None
     roots: Optional[list] = None
+    root_notes: Optional[list] = None
     number_field: Optional[str] = None
     is_irreducible: Any = None
     computation_successful: bool
@@ -63,7 +70,7 @@ def compute_splitting_field(polynomial_str):
             return {
                 "polynomial": str(poly.factor()),
                 "splitting_field": None,
-                "error": "This polynomial is reducible over Q. Consider its irreducible factors instead.",
+                "error": "This polynomial is reducible over $\\mathbb{Q}$. Consider its irreducible factors instead.",
                 "error_type": "reducible_polynomial",
                 "computation_successful": False
             }
@@ -95,7 +102,8 @@ def compute_splitting_field(polynomial_str):
                 "field": field_str,
                 "degree": field_degree,
                 "defining_polynomial": defining_poly,
-                "description": f"The splitting field of {poly} over ℚ",
+                "defining_polynomial_latex": latex(splitting_field.defining_polynomial()),
+                "description": f"The splitting field of ${latex(poly)}$ over $\\mathbb{{Q}}$",
                 "computed": True
             }
             
@@ -134,7 +142,7 @@ def compute_galois_info(polynomial_str, compute_splitting_field=False):
                 "polynomial": str(poly.factor()),
                 "degree": int(poly.degree()),
                 "is_irreducible": False,
-                "error": "This polynomial is reducible over Q and does not have a single Galois group. Consider its irreducible factors instead.",
+                "error": "This polynomial is reducible over $\\mathbb{Q}$ and does not have a single Galois group. Consider its irreducible factors instead.",
                 "error_type": "reducible_polynomial",
                 "computation_successful": False
             }
@@ -175,73 +183,22 @@ def compute_galois_info(polynomial_str, compute_splitting_field=False):
         try:
             discriminant = poly.discriminant()
             discriminant_str = str(discriminant)
+            d = QQ(discriminant)
+            discriminant_latex = (
+                ("-" if d < 0 else "") + latex(abs(d).factor()) if d not in (0, 1, -1) else latex(d)
+            )
             is_square_discriminant = bool(QQ(discriminant).is_square())
         except Exception:
             discriminant_str = None
+            discriminant_latex = None
             is_square_discriminant = None
 
         degree = order
             
-        complex_roots = poly.complex_roots()
-        
-        roots = []
-        processed_indices = set()
-        
-        for i, root in enumerate(complex_roots):
-            if i in processed_indices:
-                continue
-                
-            try:
-                complex_val = complex(root)
-                
-                if abs(complex_val.imag) < 1e-10:
-                    real_val = complex_val.real
-                    negative_index = None
-                    for j, other_root in enumerate(complex_roots):
-                        if j != i and j not in processed_indices:
-                            other_complex = complex(other_root)
-                            if (abs(other_complex.imag) < 1e-10 and 
-                                abs(other_complex.real + real_val) < 1e-6):
-                                negative_index = j
-                                break
-                    
-                    if negative_index is not None:
-                        abs_val = abs(real_val)
-                        roots.append(f"\\pm {abs_val:.6f}")
-                        processed_indices.add(negative_index)
-                    else:
-                        roots.append(f"{real_val:.6f}")
-                        
-                else:
-                    conjugate_index = None
-                    for j, other_root in enumerate(complex_roots):
-                        if j != i and j not in processed_indices:
-                            other_complex = complex(other_root)
-                            if (abs(other_complex.real - complex_val.real) < 1e-6 and 
-                                abs(other_complex.imag + complex_val.imag) < 1e-6):
-                                conjugate_index = j
-                                break
-                    
-                    if conjugate_index is not None:
-                        real_part = complex_val.real
-                        imag_part = abs(complex_val.imag)
-                        
-                        if abs(real_part) < 1e-10:
-                            roots.append(f"\\pm {imag_part:.6f}i")
-                        else:
-                            roots.append(f"{real_part:.6f} \\pm {imag_part:.6f}i")
-                        processed_indices.add(conjugate_index)
-                    else:
-                        if abs(complex_val.real) < 1e-10:
-                            roots.append(f"{complex_val.imag:.6f}i")
-                        else:
-                            roots.append(f"{complex_val.real:.6f} + {complex_val.imag:.6f}i")
-                        
-            except Exception as e:
-                roots.append(str(root))
-            
-            processed_indices.add(i)
-        
+        # Roots in the canonical order shared with the lattice (alpha_1, ..., alpha_n),
+        # each with a closed form when a readable one exists and always a decimal.
+        root_info = describe_roots(poly)
+
         try:
             is_irreducible = bool(poly.is_irreducible())
         except:
@@ -250,6 +207,7 @@ def compute_galois_info(polynomial_str, compute_splitting_field=False):
         # Initialize result without splitting field info
         result = {
             "polynomial": str(poly.factor()),
+            "polynomial_latex": latex(poly),
             "degree": degree,
             "galois_group": {
                 "order": order,
@@ -260,10 +218,12 @@ def compute_galois_info(polynomial_str, compute_splitting_field=False):
                 "is_solvable": is_solvable,
                 "transitive_label": transitive_label,
                 "discriminant": discriminant_str,
+                "discriminant_latex": discriminant_latex,
                 "is_square_discriminant": is_square_discriminant,
                 "polynomial_degree": int(poly.degree())
             },
-            "roots": roots,
+            "roots": root_info["roots"],
+            "root_notes": root_info["notes"],
             "number_field": str(K),
             "is_irreducible": is_irreducible,
             "computation_successful": True
@@ -289,7 +249,8 @@ def compute_galois_info(polynomial_str, compute_splitting_field=False):
                     "field": field_str,
                     "degree": field_degree,
                     "defining_polynomial": defining_poly,
-                    "description": f"The splitting field of {poly} over ℚ",
+                    "defining_polynomial_latex": latex(splitting_field.defining_polynomial()),
+                    "description": f"The splitting field of ${latex(poly)}$ over $\\mathbb{{Q}}$",
                     "computed": True
                 }
                 
@@ -320,7 +281,7 @@ def compute_galois_info(polynomial_str, compute_splitting_field=False):
 
 # FastAPI app configuration
 app = FastAPI(
-    title="Galois Playground API",
+    title="Correspondence API",
     description="Mathematical computation API using SageMath",
     version="4.0.0"
 )
@@ -338,7 +299,7 @@ app.add_middleware(
 async def root():
     """Root endpoint with basic info."""
     return {
-        "message": "Galois Playground Backend API",
+        "message": "Correspondence Backend API",
         "version": "4.1.0",
         "backend": "FastAPI with Direct SageMath Import",
         "sage_ready": True,
@@ -349,7 +310,8 @@ async def root():
             "LaTeX group notation formatting",
             "Optional splitting field computation",
             "Separate API for splitting field calculations",
-            "Degree 1-11 polynomials supported"
+            "Degree 1-11 polynomials supported",
+            "Subgroup / subfield lattice (Galois correspondence)"
         ],
         "docs": "/docs"
     }
@@ -450,6 +412,22 @@ async def compute_splitting_field_endpoint(request: SplittingFieldRequest) -> Sp
         )
 
 
+
+@app.post("/api/lattice")
+async def compute_lattice_endpoint(request: LatticeRequest):
+    """Subgroup lattice of Gal(L/Q) and the corresponding subfield lattice of L."""
+    poly_str = request.polynomial.strip()
+    if not poly_str:
+        raise HTTPException(status_code=400, detail="Polynomial cannot be empty")
+    try:
+        start_time = time.time()
+        result = compute_lattice(poly_str)
+        # float(): `from sage.all import *` shadows round() with Sage's, which returns a Sage real.
+        result["computation_time_seconds"] = float(round(time.time() - start_time, 4))
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lattice computation failed: {str(e)}")
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
@@ -480,7 +458,7 @@ def test_sage_capabilities():
 
 if __name__ == "__main__":
     print()
-    print("Starting Galois Playground Backend")
+    print("Starting Correspondence Backend")
     print("Backend: FastAPI with direct SageMath import")
     print("Server: http://localhost:8001")
     print("API Docs: http://localhost:8001/docs")
@@ -488,7 +466,7 @@ if __name__ == "__main__":
     uvicorn.run(
         "backend:app",
         host="0.0.0.0",
-        port=8001,
+        port=int(os.environ.get("PORT", 8001)),
         reload=False,  # Disable reload to keep SageMath imported
         workers=1,
         log_level="info"

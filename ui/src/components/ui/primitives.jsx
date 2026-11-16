@@ -1,19 +1,39 @@
-export const Button = ({ onClick, disabled, children, className = "" }) => (
-  <button
-    onClick={onClick}
-    disabled={disabled}
-    className={`px-6 py-3 bg-gradient-to-b from-gray-700 to-gray-800 hover:from-gray-600 hover:to-gray-700 active:from-gray-800 active:to-gray-900 text-gray-100 rounded-lg disabled:from-gray-900 disabled:to-black disabled:text-gray-500 disabled:cursor-not-allowed transform transition-all duration-150 hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl active:shadow-md font-semibold border border-gray-600 hover:border-accent-500/60 active:border-gray-600 ring-0 hover:ring-2 hover:ring-accent-500/20 ${className}`}
-  >
-    {children}
-  </button>
-);
+export const Button = ({ onClick, disabled, children, className = "", variant = "primary" }) => {
+  const styles =
+    variant === "primary"
+      ? "bg-accent-400 text-black border-accent-400 hover:bg-accent-300 hover:border-accent-300 active:bg-accent-500"
+      : "bg-transparent text-gray-100 border-gray-600 hover:border-accent-400 hover:text-accent-300";
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`px-6 py-3 border uppercase tracking-wider transition-colors duration-100 disabled:bg-gray-900 disabled:border-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed ${styles} ${className}`}
+    >
+      {children}
+    </button>
+  );
+};
 
 export const Card = ({ children, className = "" }) => (
-  <div className={`bg-gray-950/90 backdrop-blur-sm shadow-2xl rounded-2xl border border-gray-800 ${className}`}>
-    {children}
+  <section className={`bg-gray-950 border border-gray-800 ${className}`}>{children}</section>
+);
+
+export const CardContent = ({ children, className = "" }) => <div className={`p-6 ${className}`}>{children}</div>;
+
+// Small-caps section heading with a tan square marker.
+export const SectionTitle = ({ children, icon: Icon, className = "", right = null }) => (
+  <div className={`flex flex-wrap items-center justify-between gap-x-4 gap-y-3 mb-4 ${className}`}>
+    <h3 className="flex items-center gap-2 text-sm uppercase tracking-[0.2em] text-gray-100">
+      {Icon ? <Icon className="w-4 h-4 text-accent-400" /> : <span className="w-2 h-2 bg-accent-400" />}
+      {children}
+    </h3>
+    {right}
   </div>
 );
 
-export const CardContent = ({ children, className = "" }) => (
-  <div className={`p-6 ${className}`}>{children}</div>
+// Inner tile used inside cards.
+export const Panel = ({ children, className = "" }) => (
+  <div className={`bg-black border border-gray-800 p-4 ${className}`}>{children}</div>
 );
+
+export const Spinner = ({ className = "w-5 h-5" }) => <span className={`spinner-square ${className}`} aria-hidden />;

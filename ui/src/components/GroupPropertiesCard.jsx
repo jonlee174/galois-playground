@@ -1,62 +1,66 @@
-import MathDisplay from "./math/MathDisplay";
-import { Card, CardContent } from "./ui/primitives";
-import { CheckCircleIcon, LatticeIcon, XCircleThinIcon } from "./icons";
+import FitMath from "./math/FitMath";
+import MathDisplay, { Rationals } from "./math/MathDisplay";
+import { Card, CardContent, Panel, SectionTitle } from "./ui/primitives";
 
-const PropertyTile = ({ label, isTrue, trueLabel, falseLabel, explanation }) => (
-  <div className="bg-gray-900/70 rounded-lg p-4 border border-gray-800">
+const Mark = ({ value }) => (
+  <span
+    className={`w-3 h-3 shrink-0 border ${
+      value === true ? "bg-accent-400 border-accent-400" : value === false ? "border-gray-500" : "border-gray-700 border-dashed"
+    }`}
+  />
+);
+
+const PropertyTile = ({ label, value, explanation }) => (
+  <Panel>
     <div className="flex items-center gap-2 mb-1.5">
-      {isTrue === null || isTrue === undefined ? (
-        <span className="w-5 h-5 shrink-0 rounded-full border border-gray-700" />
-      ) : isTrue ? (
-        <CheckCircleIcon className="w-5 h-5 shrink-0 text-accent-400" />
-      ) : (
-        <XCircleThinIcon className="w-5 h-5 shrink-0 text-gray-500" />
-      )}
-      <h4 className="font-semibold text-gray-100 text-sm">{label}</h4>
+      <Mark value={value} />
+      <h4 className="text-sm text-gray-100">{label}</h4>
+      <span className="ml-auto text-sm text-accent-300 uppercase tracking-wider">
+        {value === null || value === undefined ? "Unknown" : value ? "Yes" : "No"}
+      </span>
     </div>
-    <p className="text-sm text-gray-200 font-medium">
-      {isTrue === null || isTrue === undefined ? "Unknown" : isTrue ? trueLabel : falseLabel}
-    </p>
-    {explanation && <p className="text-xs text-gray-500 mt-1 leading-relaxed">{explanation}</p>}
-  </div>
+    {explanation && <p className="text-xs text-gray-500 leading-relaxed">{explanation}</p>}
+  </Panel>
 );
 
 export default function GroupPropertiesCard({ galoisGroup }) {
   if (!galoisGroup) return null;
 
-  const { is_abelian, is_solvable, transitive_label, discriminant, is_square_discriminant, polynomial_degree } =
-    galoisGroup;
+  const {
+    is_abelian,
+    is_solvable,
+    transitive_label,
+    discriminant,
+    discriminant_latex,
+    is_square_discriminant,
+    polynomial_degree,
+  } = galoisGroup;
 
   const hasAnyProperty =
     is_abelian !== undefined || is_solvable !== undefined || transitive_label || discriminant !== undefined;
   if (!hasAnyProperty) return null;
 
-  return (
-    <Card className="shadow-xl border border-gray-800">
-      <CardContent className="pt-6">
-        <div className="flex items-center gap-2 mb-4">
-          <LatticeIcon className="w-5 h-5 text-accent-400" />
-          <h3 className="text-lg font-semibold text-gray-100">Group &amp; Field Properties</h3>
-        </div>
+  const An = <MathDisplay inline>{`A_{${polynomial_degree ?? "n"}}`}</MathDisplay>;
 
-        <div className="grid sm:grid-cols-2 gap-4">
+  return (
+    <Card>
+      <CardContent>
+        <SectionTitle>Group &amp; field properties</SectionTitle>
+
+        <div className="grid sm:grid-cols-2 gap-3">
           <PropertyTile
             label="Solvable by radicals"
-            isTrue={is_solvable}
-            trueLabel="Yes"
-            falseLabel="No"
+            value={is_solvable}
             explanation={
               is_solvable === false
-                ? "By the Abel–Ruffini theorem, no formula using +, −, ×, ÷, and radicals can express the roots."
-                : "The Galois group is a solvable group, so the roots can in principle be written using nested radicals."
+                ? "By the Abel–Ruffini theorem, no formula using +, −, ×, ÷ and radicals can express the roots."
+                : "The Galois group is solvable, so the roots can in principle be written using nested radicals."
             }
           />
 
           <PropertyTile
             label="Abelian"
-            isTrue={is_abelian}
-            trueLabel="Yes"
-            falseLabel="No"
+            value={is_abelian}
             explanation={
               is_abelian
                 ? "Every pair of automorphisms in the group commutes."
@@ -64,37 +68,40 @@ export default function GroupPropertiesCard({ galoisGroup }) {
             }
           />
 
-          <div className="bg-gray-900/70 rounded-lg p-4 border border-gray-800">
-            <h4 className="font-semibold text-gray-100 text-sm mb-1.5">Discriminant</h4>
-            <p className="text-sm text-gray-200 font-mono break-all">
-              {discriminant !== null && discriminant !== undefined ? discriminant : "Unknown"}
-            </p>
+          <Panel>
+            <h4 className="text-sm text-gray-100 mb-1.5">Discriminant</h4>
+            <div className="text-gray-100">
+              {discriminant_latex || discriminant ? (
+                <FitMath align="left">{`\\Delta = ${discriminant_latex || discriminant}`}</FitMath>
+              ) : (
+                "Unknown"
+              )}
+            </div>
             {is_square_discriminant !== null && is_square_discriminant !== undefined && (
-              <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+              <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
                 {is_square_discriminant ? (
                   <>
-                    A perfect square in ℚ, so the Galois group lies inside{" "}
-                    <MathDisplay inline>{`A_{${polynomial_degree ?? "n"}}`}</MathDisplay> (even permutations only).
+                    A perfect square in <Rationals />, so the Galois group lies inside {An} (even permutations only).
                   </>
                 ) : (
                   <>
-                    Not a perfect square in ℚ, so the Galois group contains odd permutations and is not a
-                    subgroup of <MathDisplay inline>{`A_{${polynomial_degree ?? "n"}}`}</MathDisplay>.
+                    Not a perfect square in <Rationals />, so the Galois group contains odd permutations and is not a
+                    subgroup of {An}.
                   </>
                 )}
               </p>
             )}
-          </div>
+          </Panel>
 
           {transitive_label && (
-            <div className="bg-gray-900/70 rounded-lg p-4 border border-gray-800">
-              <h4 className="font-semibold text-gray-100 text-sm mb-1.5">Transitive Group Classification</h4>
-              <p className="text-sm text-gray-200 font-mono">{transitive_label}</p>
-              <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                Label from the transitive permutation group catalogue (degree T index), used to identify Galois
+            <Panel>
+              <h4 className="text-sm text-gray-100 mb-1.5">Transitive group</h4>
+              <p className="text-accent-300 tracking-wider">{transitive_label}</p>
+              <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
+                Label in the catalogue of transitive permutation groups (degree T index), used to identify Galois
                 groups of number fields.
               </p>
-            </div>
+            </Panel>
           )}
         </div>
       </CardContent>

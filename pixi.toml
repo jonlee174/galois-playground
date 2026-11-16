@@ -1,0 +1,18 @@
+[workspace]
+name = "galois-playground"
+channels = ["conda-forge"]
+platforms = ["osx-arm64", "osx-64", "linux-64"]
+
+[dependencies]
+python = "3.12.*"
+sage = "*"
+fastapi = "*"
+uvicorn = "*"
+nodejs = ">=20"
+pytest = ">=9.2.0,<10"
+
+[tasks]
+backend = "python backend.py"
+install-ui = { cmd = "npm install", cwd = "ui", inputs = ["ui/package.json", "ui/package-lock.json"], outputs = ["ui/node_modules/.package-lock.json"] }
+frontend = { cmd = "npm run dev", cwd = "ui", depends-on = ["install-ui"] }
+test = "python -m pytest -q -p no:warnings tests"

@@ -3,13 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Galois Theory Playground | Explore Field Extensions & Galois Groups</title>
-    <meta name="description" content="Interactive Galois Theory tool powered by SageMath. Compute Galois groups, explore field extensions, and visualize polynomial roots." />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- MathJax Configuration -->
+    <title>Correspondence</title>
+    <meta name="description" content="Galois groups, splitting fields and the subgroup/subfield lattice of polynomials over the rationals, computed with SageMath." />
+    <link rel="preload" href="/fonts/ModernNo20.ttf" as="font" type="font/ttf" crossorigin>
+
     <script>
       window.MathJax = {
         tex: {
@@ -20,18 +17,11 @@
           packages: {'[+]': ['ams', 'newcommand', 'configmacros']}
         },
         options: {
-          skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre']
-        },
-        startup: {
-          ready: () => {
-            MathJax.startup.defaultReady();
-            console.log('MathJax is loaded and ready!');
-          }
+          skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code', 'input']
         }
       };
     </script>
-    <script async src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-    <script async id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script async id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"></script>
   </head>
   <body>
     <div id="root"></div>
